@@ -10,7 +10,7 @@ import {
   finishAndArchive,
   triggerSecondCall,
 } from "@/lib/pickup/simulator";
-import { ActivityTimeline } from "@/components/monitoring/StageStepper";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { CircularCooldownTimer } from "@/components/monitoring/CircularCooldownTimer";
 
 import { QrOnlyMonitoring } from "@/components/monitoring/QrOnlyMonitoring";
@@ -54,6 +54,7 @@ function Monitoring() {
   const nav = useNavigate();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [confirmDone, setConfirmDone] = useState(false);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -190,11 +191,6 @@ function Monitoring() {
         </>
       )}
 
-      <SectionHeader title="Riwayat Aktivitas" className="mt-8" />
-      <div className="mx-5 rounded-3xl border border-border bg-surface p-5 shadow-card">
-        <ActivityTimeline entries={current.timeline} />
-      </div>
-
       <SectionHeader title="Status Sistem" className="mt-8" />
       <div className="mx-5 grid grid-cols-2 gap-3">
         <SystemTile icon={<Server className="h-4 w-4" />} title="Server" status="Normal" />
@@ -261,16 +257,25 @@ function Monitoring() {
           </SheetContent>
         </Sheet>
 
-        <BigButton
-          variant="secondary"
-          onClick={() => {
-            finishAndArchive();
-            nav({ to: "/pickup/complete" });
-          }}
-        >
+        <BigButton variant="secondary" onClick={() => setConfirmDone(true)}>
           Selesai — anak sudah dijemput
         </BigButton>
       </div>
+
+      <ConfirmDialog
+        open={confirmDone}
+        title="Ananda sudah bersama Anda?"
+        description="Pastikan Ananda benar-benar sudah berada bersama Anda di gerbang sebelum menyelesaikan penjemputan. Status ini akan tercatat di riwayat."
+        confirmLabel="Ya, sudah bersama saya"
+        cancelLabel="Belum"
+        onCancel={() => setConfirmDone(false)}
+        onConfirm={() => {
+          setConfirmDone(false);
+          finishAndArchive();
+          toast.success("Penjemputan selesai & disimpan ke riwayat");
+          nav({ to: "/pickup/complete" });
+        }}
+      />
     </PhoneShell>
   );
 }
