@@ -90,7 +90,9 @@ export function AutoPickupGeofence() {
 
   // distance progression when tracking
   useEffect(() => {
+    if (!autoMode) return;
     if (state === "searching" || state === "unavailable" || state === "arrived") return;
+
     const t = setTimeout(() => {
       const next = Math.min(stepIndex + 1, DISTANCE_SEQUENCE.length - 1);
       const nextD = DISTANCE_SEQUENCE[next];
