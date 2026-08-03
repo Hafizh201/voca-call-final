@@ -78,6 +78,12 @@ function Monitoring() {
     );
   }
 
+  // Mode sistem QR: halaman hanya berisi QR + kode pemanggilan.
+  if (current.qrCode) {
+    return <QrOnlyMonitoring current={current} />;
+  }
+
+
   const inCooldown = current.cooldownStartedAt !== null;
   const startedAt = current.cooldownStartedAt ?? Date.now();
   const remaining = inCooldown ? Math.max(0, COOLDOWN_MS - (Date.now() - startedAt)) : COOLDOWN_MS;
