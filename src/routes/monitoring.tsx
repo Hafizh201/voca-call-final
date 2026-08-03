@@ -54,6 +54,7 @@ function Monitoring() {
   const nav = useNavigate();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [confirmDone, setConfirmDone] = useState(false);
   const [, setTick] = useState(0);
 
   useEffect(() => {
