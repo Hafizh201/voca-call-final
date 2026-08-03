@@ -10,7 +10,7 @@ import {
   finishAndArchive,
   triggerSecondCall,
 } from "@/lib/pickup/simulator";
-import { ActivityTimeline } from "@/components/monitoring/StageStepper";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { CircularCooldownTimer } from "@/components/monitoring/CircularCooldownTimer";
 
 import { QrOnlyMonitoring } from "@/components/monitoring/QrOnlyMonitoring";
