@@ -28,32 +28,22 @@ export const Route = createFileRoute("/pickup/form/$method")({
   component: FormPage,
 });
 
-const draft = {
-  method: "self" as "self" | "other" | "ojek",
-  note: "",
-  noteExtras: [] as string[],
-  estimate: "sudah",
-  waitLocation: "Gerbang Utama",
-  pickerName: "",
-  relation: "Kakek",
-  driverName: "",
-  platform: "Gojek" as "Gojek" | "Grab" | "Maxim" | "InDrive",
-  plate: "",
-};
-
-let draftMemo = { ...draft };
-
 function FormPage() {
   const ready = usePageReady();
   const { method } = Route.useParams() as { method: "self" | "other" | "ojek" };
   const { s, f } = Route.useSearch();
   const nav = useNavigate();
-  const [state, setState] = useState({ ...draftMemo, method });
+  const [state, setState] = useState<PickupDraft>(() => ({ ...getDraft(), method }));
   const [noteValid, setNoteValid] = useState(true);
   const [qrAsk, setQrAsk] = useState(false);
+
+  useEffect(() => {
+    setDraft({ ...state, method });
+  }, [state, method]);
+
   if (!ready) return <FormSkeleton />;
 
-  const set = <K extends keyof typeof state>(k: K, v: (typeof state)[K]) =>
+  const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
     setState((p) => ({ ...p, [k]: v }));
 
   const studentIds = (s ?? students.filter((x) => !x.pendingApproval)[0].id).split(",");
