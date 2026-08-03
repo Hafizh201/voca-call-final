@@ -191,9 +191,6 @@ function Monitoring() {
       )}
 
       <SectionHeader title="Status Sistem" className="mt-8" />
-
-
-      <SectionHeader title="Status Sistem" className="mt-8" />
       <div className="mx-5 grid grid-cols-2 gap-3">
         <SystemTile icon={<Server className="h-4 w-4" />} title="Server" status="Normal" />
         <SystemTile icon={<Cpu className="h-4 w-4" />} title="AI" status="Aktif" />
