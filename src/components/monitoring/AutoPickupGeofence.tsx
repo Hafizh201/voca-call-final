@@ -68,7 +68,8 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
 
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
-  const [autoMode, setAutoMode] = useState(true);
+  const [autoMode, setAutoMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [state, setState] = useState<GpsState>("searching");
   const [distance, setDistance] = useState<number>(DISTANCE_SEQUENCE[0]);
   const [stepIndex, setStepIndex] = useState(0);
@@ -76,6 +77,7 @@ export function AutoPickupGeofence() {
 
   // initial GPS "search"
   useEffect(() => {
+    if (!autoMode) return;
     if (state !== "searching") return;
     const t = setTimeout(() => {
       setState("outside");
@@ -83,7 +85,8 @@ export function AutoPickupGeofence() {
     }, 1800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoMode, state]);
+
 
   // distance progression when tracking
   useEffect(() => {
