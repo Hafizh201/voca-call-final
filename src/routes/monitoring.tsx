@@ -256,16 +256,25 @@ function Monitoring() {
           </SheetContent>
         </Sheet>
 
-        <BigButton
-          variant="secondary"
-          onClick={() => {
-            finishAndArchive();
-            nav({ to: "/pickup/complete" });
-          }}
-        >
+        <BigButton variant="secondary" onClick={() => setConfirmDone(true)}>
           Selesai — anak sudah dijemput
         </BigButton>
       </div>
+
+      <ConfirmDialog
+        open={confirmDone}
+        title="Ananda sudah bersama Anda?"
+        description="Pastikan Ananda benar-benar sudah berada bersama Anda di gerbang sebelum menyelesaikan penjemputan. Status ini akan tercatat di riwayat."
+        confirmLabel="Ya, sudah bersama saya"
+        cancelLabel="Belum"
+        onCancel={() => setConfirmDone(false)}
+        onConfirm={() => {
+          setConfirmDone(false);
+          finishAndArchive();
+          toast.success("Penjemputan selesai & disimpan ke riwayat");
+          nav({ to: "/pickup/complete" });
+        }}
+      />
     </PhoneShell>
   );
 }
