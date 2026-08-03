@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 type Listener = () => void;
 
-function createStore<T>(key: string, initial: T) {
+export function createStore<T>(key: string, initial: T) {
   let state: T = initial;
   const listeners = new Set<Listener>();
 
