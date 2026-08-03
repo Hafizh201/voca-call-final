@@ -95,6 +95,9 @@ function Monitoring() {
   const teacherNote =
     current.callCount >= 2 ? "Ananda masih menyelesaikan tugas di kelas, mohon menunggu sebentar." : null;
   const lastLabel = current.timeline[current.timeline.length - 1]?.label;
+  const isSelfPickup = current.method === "self";
+  const pickerLabel =
+    current.method === "ojek" ? "driver ojek online" : current.pickerName || "penjemput yang dipilih";
 
   return (
     <PhoneShell>
@@ -258,15 +261,19 @@ function Monitoring() {
         </Sheet>
 
         <BigButton variant="secondary" onClick={() => setConfirmDone(true)}>
-          Selesai — anak sudah dijemput
+          {isSelfPickup ? "Selesai — anak sudah dijemput" : "Selesai"}
         </BigButton>
       </div>
 
       <ConfirmDialog
         open={confirmDone}
-        title="Ananda sudah bersama Anda?"
-        description="Pastikan Ananda benar-benar sudah berada bersama Anda di gerbang sebelum menyelesaikan penjemputan. Status ini akan tercatat di riwayat."
-        confirmLabel="Ya, sudah bersama saya"
+        title={isSelfPickup ? "Ananda sudah bersama Anda?" : "Selesaikan penjemputan?"}
+        description={
+          isSelfPickup
+            ? "Pastikan Ananda benar-benar sudah berada bersama Anda di gerbang sebelum menyelesaikan penjemputan. Status ini akan tercatat di riwayat."
+            : `Pastikan Ananda sudah dijemput oleh ${pickerLabel}. Penjemputan akan ditutup dan otomatis tersimpan ke riwayat.`
+        }
+        confirmLabel={isSelfPickup ? "Ya, sudah bersama saya" : "Ya, selesaikan"}
         cancelLabel="Belum"
         onCancel={() => setConfirmDone(false)}
         onConfirm={() => {
