@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { usePageReady } from "@/hooks/use-page-ready";
 import { FormSkeleton } from "@/components/feedback/Skeletons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
@@ -12,6 +12,7 @@ import { students, friends, dismissalFor, type Student, type Friend } from "@/li
 import { isValidPlate } from "@/lib/format/utils";
 import { Users, Clock, Megaphone, QrCode } from "lucide-react";
 import { QrGuideDialog } from "@/components/pickup/QrGuideDialog";
+import { getDraft, setDraft, type PickupDraft } from "@/lib/pickup/draft";
 
 const searchSchema = z.object({ s: z.string().optional(), f: z.string().optional() });
 
@@ -252,7 +253,7 @@ function FormPage() {
         <BigButton
           disabled={!canNext}
           onClick={() => {
-            draftMemo = state;
+            setDraft({ ...state, method });
             nav({
               to: "/pickup/preview",
               search: {
@@ -267,8 +268,4 @@ function FormPage() {
       </div>
     </PhoneShell>
   );
-}
-
-export function getDraft() {
-  return draftMemo;
 }
