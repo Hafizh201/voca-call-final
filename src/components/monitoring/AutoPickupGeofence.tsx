@@ -166,111 +166,110 @@ export function AutoPickupGeofence() {
     <div className="mx-5 mt-5 space-y-4">
       {/* Safety banner */}
       <SafetyBanner dismissed={dismissed} studentName={firstStudent?.nickname ?? "Siswa"} />
-      {/* Auto pickup toggle card */}
-      <div className="rounded-3xl border border-border bg-surface p-4 shadow-card">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            "grid h-11 w-11 place-items-center rounded-2xl transition",
-            autoMode ? "bg-primary/10 text-primary" : "bg-surface-2 text-muted-foreground",
+      {/* Satu kartu: area GPS (muncul saat toggle aktif) + baris toggle */}
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-3xl border border-border p-4 shadow-card transition-colors duration-500",
+          autoMode ? cn("bg-gradient-to-br", tone.bg) : "bg-surface",
+        )}
+      >
+        {autoMode && (
+          <div className="animate-fade-in px-1 pb-4 pt-1">
+            <div className="flex items-start gap-4">
+              <div className="relative shrink-0">
+                <Radar state={state} pct={pct} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", tone.chip)}>
+                    <StateIcon state={state} />
+                    {tone.label}
+                  </span>
+                </div>
+                <h3 className={cn("mt-2 font-display text-base font-bold leading-tight", tone.text)}>
+                  {titleFor(state)}
+                </h3>
+
+                {(state === "outside" || state === "approaching") && (
+                  <div className="mt-2">
+                    <div className="flex items-end justify-between gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Jarak ke sekolah</span>
+                      <span className={cn("font-display text-xl font-bold tabular-nums", tone.text)}>
+                        {formatDistance(distance)}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                      <div
+                        className={cn("h-full rounded-full transition-all duration-700", state === "approaching" ? "bg-accent" : "bg-primary")}
+                        style={{ width: `${pct * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {state === "searching" && (
+                  <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Mengambil sinyal GPS…</span>
+                  </div>
+                )}
+
+                {state === "unavailable" && (
+                  <div className="mt-3 space-y-2">
+                    <ul className="space-y-1 text-[11px] text-muted-foreground">
+                      <li className="flex items-center gap-2"><MapPin className="h-3 w-3" /> GPS aktif</li>
+                      <li className="flex items-center gap-2"><ShieldAlert className="h-3 w-3" /> Izin lokasi diberikan</li>
+                      <li className="flex items-center gap-2"><Wifi className="h-3 w-3" /> Internet tersedia</li>
+                    </ul>
+                    <button
+                      onClick={retry}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-warning px-3 py-1.5 text-[11px] font-bold text-warning-foreground shadow-card active:scale-95"
+                    >
+                      <RefreshCw className="h-3 w-3" /> Coba Lagi
+                    </button>
+                  </div>
+                )}
+
+                {state === "arrived" && (
+                  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
+                    <CheckCircle2 className="h-4 w-4 animate-pop" />
+                    Sistem mengirim permintaan pemanggilan otomatis.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className={cn("rounded-3xl", autoMode && "bg-surface p-4 shadow-card")}>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition",
+              autoMode ? "bg-surface-2 text-primary" : "bg-surface-2 text-muted-foreground",
+            )}>
+              <Navigation className={cn("h-5 w-5 transition", autoMode && "animate-pulse")} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-sm font-bold text-ink">Panggil Otomatis</p>
+              <p className="text-[11px] text-muted-foreground">Matikan jika ingin memanggil secara manual.</p>
+            </div>
+            <Switch
+              checked={autoMode}
+              onCheckedChange={(v) => (v ? setConfirmOpen(true) : disableAutoMode())}
+              className="h-6 w-11 shrink-0 data-[state=checked]:bg-primary [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
+            />
+          </div>
+          <p className={cn(
+            "mt-3 rounded-2xl px-3 py-2 text-[11px] leading-relaxed transition",
+            autoMode ? "bg-surface-2 text-muted-foreground" : "bg-warning/15 text-warning-foreground",
           )}>
-            <Navigation className={cn("h-5 w-5 transition", autoMode && "animate-pulse")} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-display text-sm font-bold text-ink">Panggil Otomatis</p>
-            <p className="text-[11px] text-muted-foreground">Matikan jika ingin memanggil secara manual.</p>
-          </div>
-          <Switch
-            checked={autoMode}
-            onCheckedChange={(v) => (v ? setConfirmOpen(true) : disableAutoMode())}
-            className="h-6 w-11 data-[state=checked]:bg-primary [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
-          />
+            {autoMode
+              ? "Saat Anda memasuki radius sekolah, sistem akan mengirim permintaan penjemputan secara otomatis."
+              : "Mode lokasi dimatikan. Anda harus melakukan pemanggilan secara manual menggunakan tombol di bawah."}
+          </p>
         </div>
-        <p className={cn(
-          "mt-3 rounded-2xl px-3 py-2 text-[11px] leading-relaxed transition",
-          autoMode ? "bg-primary/5 text-primary" : "bg-warning/15 text-warning-foreground",
-        )}>
-          {autoMode
-            ? "Saat Anda memasuki radius sekolah, sistem akan mengirim permintaan penjemputan secara otomatis."
-            : "Mode lokasi dimatikan. Anda harus melakukan pemanggilan secara manual menggunakan tombol di bawah."}
-        </p>
       </div>
 
-      {/* Pickup detection card — hanya tampil setelah Panggil Otomatis dinyalakan */}
-      {autoMode && (
-        <div
-          className={cn(
-            "relative animate-fade-in overflow-hidden rounded-3xl border border-border bg-gradient-to-br p-5 shadow-card transition-colors duration-500",
-            tone.bg,
-          )}
-        >
-          <div className="flex items-start gap-4">
-            <div className="relative shrink-0">
-              <Radar state={state} pct={pct} />
-            </div>
-            <div className="ml-[-5px] min-w-0 flex-1">
-              <div className="ml-[-5px] flex items-center gap-2">
-                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", tone.chip)}>
-                  <StateIcon state={state} />
-                  {tone.label}
-                </span>
-              </div>
-              <h3 className={cn("mt-2 ml-[-5px] font-display text-base font-bold leading-tight", tone.text)}>
-                {titleFor(state)}
-              </h3>
-              <p className="mt-1 ml-[-5px] text-[11px] leading-relaxed text-muted-foreground">
-                {descriptionFor(state)}
-              </p>
-
-              {(state === "outside" || state === "approaching") && (
-                <div className="mt-1 ml-[-5px]">
-                  <div className="flex items-end justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Jarak ke sekolah</span>
-                    <span className={cn("font-display text-xl font-bold tabular-nums", tone.text)}>
-                      {formatDistance(distance)}
-                    </span>
-                  </div>
-                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
-                    <div
-                      className={cn("h-full rounded-full transition-all duration-700", state === "approaching" ? "bg-accent" : "bg-primary")}
-                      style={{ width: `${pct * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {state === "searching" && (
-                <div className="mt-3 ml-[-5px] flex items-center gap-2 text-[11px] text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  <span>Mengambil sinyal GPS…</span>
-                </div>
-              )}
-
-              {state === "unavailable" && (
-                <div className="mt-3 space-y-2">
-                  <ul className="space-y-1 text-[11px] text-muted-foreground">
-                    <li className="flex items-center gap-2"><MapPin className="h-3 w-3" /> GPS aktif</li>
-                    <li className="flex items-center gap-2"><ShieldAlert className="h-3 w-3" /> Izin lokasi diberikan</li>
-                    <li className="flex items-center gap-2"><Wifi className="h-3 w-3" /> Internet tersedia</li>
-                  </ul>
-                  <button
-                    onClick={retry}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-warning px-3 py-1.5 text-[11px] font-bold text-warning-foreground shadow-card active:scale-95"
-                  >
-                    <RefreshCw className="h-3 w-3" /> Coba Lagi
-                  </button>
-                </div>
-              )}
-
-              {state === "arrived" && (
-                <div className="mt-3 ml-[-10px] flex items-center gap-2 rounded-sm bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
-                  <CheckCircle2 className="h-4 w-4 animate-pop" />
-                  Sistem mengirim permintaan pemanggilan otomatis.
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       <ConfirmDialog
         open={confirmOpen}
