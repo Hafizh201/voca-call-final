@@ -107,12 +107,14 @@ export function AutoPickupGeofence() {
       }
     }, 2200);
     return () => clearTimeout(t);
-  }, [stepIndex, state]);
+  }, [stepIndex, state, autoMode]);
 
   // when arriving with auto mode, run smart auto call sequence
   useEffect(() => {
+    if (!autoMode) return;
     if (state !== "arrived" || firedRef.current) return;
     firedRef.current = true;
+
     appendTimeline("Memasuki radius sekolah", "verified");
     if (!autoMode) return;
     const steps: { at: number; label: string; stage: PickupStage }[] = [
