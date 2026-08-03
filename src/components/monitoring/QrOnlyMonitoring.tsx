@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { Share2, Link2, ScanLine, QrCode, ScanEye } from "lucide-react";
+import { Share2, Link2, ScanLine, QrCode, ScanEye, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
-import { simulateScan } from "@/lib/pickup/simulator";
-import type { PickupRequest } from "@/lib/state/stores";
+import { simulateScan, finishAndArchive } from "@/lib/pickup/simulator";
+import { STAGE_LABELS, type PickupRequest } from "@/lib/state/stores";
 
 function shareUrlFor(code: string) {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
