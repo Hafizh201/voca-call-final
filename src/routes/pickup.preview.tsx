@@ -82,6 +82,7 @@ function PreviewPage() {
       platform: draft.platform,
       plate: formatPlate(draft.plate),
     });
+    resetDraft();
     nav({ to: "/monitoring" });
   };
 

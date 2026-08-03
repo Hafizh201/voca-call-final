@@ -83,7 +83,7 @@ export function submitPickup(input: Omit<PickupRequest, "id" | "createdAt" | "st
     callCount: 1,
   };
   pickupStore.set({ current: req, history: pickupStore.get().history });
-  startSimulation(id);
+  if (!req.qrCode) startSimulation(id);
   return req;
 }
 
@@ -153,13 +153,39 @@ export function simulateScan() {
   const s = pickupStore.get();
   if (!s.current) return;
   const req = s.current;
+  const firstScan = (req.scanCount ?? 0) === 0;
   pickupStore.set({
     current: {
       ...req,
       scanCount: (req.scanCount ?? 0) + 1,
       lastScannedAt: Date.now(),
+      timeline: [
+        ...req.timeline,
+        { at: nowHHmm(), label: "Kode QR dipindai petugas gerbang", stage: req.stage },
+      ],
     },
   });
+
+  // Pemindaian pertama memicu antrean pemanggilan sampai selesai.
+  if (!firstScan) return;
+  const steps: { stage: PickupStage; delay: number }[] = [
+    { stage: "queued", delay: 900 },
+    { stage: "announcing", delay: 2200 },
+    { stage: "done", delay: 4200 },
+  ];
+  for (const step of steps) {
+    setTimeout(() => {
+      const cur = pickupStore.get().current;
+      if (!cur || cur.id !== req.id) return;
+      pickupStore.set({
+        current: {
+          ...cur,
+          stage: step.stage,
+          timeline: [...cur.timeline, { at: nowHHmm(), label: LABELS[step.stage], stage: step.stage }],
+        },
+      });
+    }, step.delay);
+  }
 }
 
 export function resetScans() {
