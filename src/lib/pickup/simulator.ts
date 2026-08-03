@@ -148,3 +148,22 @@ export function triggerSecondCall(extras: string[]) {
     });
   }, 4400);
 }
+
+export function simulateScan() {
+  const s = pickupStore.get();
+  if (!s.current) return;
+  const req = s.current;
+  pickupStore.set({
+    current: {
+      ...req,
+      scanCount: (req.scanCount ?? 0) + 1,
+      lastScannedAt: Date.now(),
+    },
+  });
+}
+
+export function resetScans() {
+  const s = pickupStore.get();
+  if (!s.current) return;
+  pickupStore.set({ current: { ...s.current, scanCount: 0, lastScannedAt: null } });
+}
