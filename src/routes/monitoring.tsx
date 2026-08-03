@@ -124,12 +124,6 @@ function Monitoring() {
       </div>
       )}
 
-      {current.qrCode && (
-        <>
-          <SectionHeader title="Kode QR Penjemputan" className="mt-8" />
-          <QrTicket code={current.qrCode} announcement={current.announcement} />
-        </>
-      )}
 
       {student && (
         <>
