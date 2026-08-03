@@ -13,6 +13,7 @@ import {
 import { ActivityTimeline } from "@/components/monitoring/StageStepper";
 import { CircularCooldownTimer } from "@/components/monitoring/CircularCooldownTimer";
 import { QrTicket } from "@/components/monitoring/QrTicket";
+import { QrOnlyMonitoring } from "@/components/monitoring/QrOnlyMonitoring";
 import { SectionHeader, IconBadge, Chip } from "@/components/common/Section";
 import {
   Radio,
