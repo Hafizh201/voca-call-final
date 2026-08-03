@@ -95,6 +95,9 @@ function Monitoring() {
   const teacherNote =
     current.callCount >= 2 ? "Ananda masih menyelesaikan tugas di kelas, mohon menunggu sebentar." : null;
   const lastLabel = current.timeline[current.timeline.length - 1]?.label;
+  const isSelfPickup = current.method === "self";
+  const pickerLabel =
+    current.method === "ojek" ? "driver ojek online" : current.pickerName || "penjemput yang dipilih";
 
   return (
     <PhoneShell>
