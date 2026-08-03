@@ -14,6 +14,8 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+
 import { pickupStore, useActivePickup, STAGE_ORDER, type PickupStage } from "@/lib/state/stores";
 import { nowHHmm } from "@/lib/format/utils";
 import { students } from "@/lib/dummy/data";
