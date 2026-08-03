@@ -136,6 +136,17 @@ export function AutoPickupGeofence() {
     setState("searching");
   }
 
+  function enableAutoMode() {
+    retry();
+    setAutoMode(true);
+  }
+
+  function disableAutoMode() {
+    setAutoMode(false);
+    retry();
+  }
+
+
   function simulateUnavailable() {
     setState("unavailable");
   }
