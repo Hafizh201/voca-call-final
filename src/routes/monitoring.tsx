@@ -190,10 +190,8 @@ function Monitoring() {
         </>
       )}
 
-      <SectionHeader title="Riwayat Aktivitas" className="mt-8" />
-      <div className="mx-5 rounded-3xl border border-border bg-surface p-5 shadow-card">
-        <ActivityTimeline entries={current.timeline} />
-      </div>
+      <SectionHeader title="Status Sistem" className="mt-8" />
+
 
       <SectionHeader title="Status Sistem" className="mt-8" />
       <div className="mx-5 grid grid-cols-2 gap-3">
