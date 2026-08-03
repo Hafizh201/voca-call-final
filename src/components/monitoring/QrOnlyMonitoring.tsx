@@ -20,8 +20,10 @@ function formatTime(ts: number) {
 export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
   const code = current.qrCode ?? "";
   const [src, setSrc] = useState<string | null>(null);
+  const nav = useNavigate();
   const scanCount = current.scanCount ?? 0;
   const lastScannedAt = current.lastScannedAt ?? null;
+  const isDone = current.stage === "done";
 
   useEffect(() => {
     let alive = true;
