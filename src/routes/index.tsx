@@ -1,24 +1,45 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { sessionStore } from "@/lib/state/stores";
+import { PhoneShell } from "@/components/layout/PhoneShell";
+import { Megaphone } from "lucide-react";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
-  component: Index,
+  head: () => ({
+    meta: [
+      { title: "Panggil — Aplikasi Penjemputan Siswa" },
+      { name: "description", content: "Aplikasi pendamping penjemputan siswa yang tenang, jelas, dan mudah." },
+      { property: "og:title", content: "Panggil — Aplikasi Penjemputan Siswa" },
+      { property: "og:description", content: "Pendamping digital untuk penjemputan siswa." },
+    ],
+  }),
+  component: Splash,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function Splash() {
+  const nav = useNavigate();
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const { signedIn } = sessionStore.get();
+      nav({ to: signedIn ? "/dashboard" : "/login" });
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [nav]);
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <PhoneShell padded={false}>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-hero px-8 text-primary-foreground">
+        <div className="grid h-24 w-24 place-items-center rounded-3xl bg-white/15 shadow-glow animate-scale-in">
+          <Megaphone className="h-10 w-10" />
+        </div>
+        <h1 className="mt-6 font-montserrat text-6xl font-extrabold tracking-[5px]">VOCA</h1>
+        <p className="mt-2 text-xs text-white/70 italic">School Voice Announcement Platform</p>
+        <div className="mt-10 flex gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-white/60 animate-pulse [animation-delay:150ms]" />
+          <span className="h-2 w-2 rounded-full bg-white/40 animate-pulse [animation-delay:300ms]" />
+        </div>
+      </div>
+    </PhoneShell>
   );
 }
