@@ -121,11 +121,24 @@ export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
             </p>
             <p className="text-[11px] text-muted-foreground">
               {lastScannedAt
-                ? `Pemindaian terakhir pukul ${formatTime(lastScannedAt)}`
+                ? `Pemindaian terakhir pukul ${formatTime(lastScannedAt)} · ${STAGE_LABELS[current.stage]}`
                 : "Menunggu petugas gerbang memindai kode"}
             </p>
           </div>
         </div>
+
+        {isDone && (
+          <button
+            onClick={() => {
+              finishAndArchive();
+              toast.success("Penjemputan selesai & disimpan ke riwayat");
+              nav({ to: "/dashboard" });
+            }}
+            className="mt-4 inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground shadow-card transition active:scale-95"
+          >
+            <CheckCircle2 className="h-4 w-4" /> Selesai
+          </button>
+        )}
       </div>
     </PhoneShell>
   );
