@@ -12,7 +12,7 @@ import {
 } from "@/lib/pickup/simulator";
 import { ActivityTimeline } from "@/components/monitoring/StageStepper";
 import { CircularCooldownTimer } from "@/components/monitoring/CircularCooldownTimer";
-import { QrTicket } from "@/components/monitoring/QrTicket";
+
 import { QrOnlyMonitoring } from "@/components/monitoring/QrOnlyMonitoring";
 import { SectionHeader, IconBadge, Chip } from "@/components/common/Section";
 import {
@@ -105,7 +105,7 @@ function Monitoring() {
         <div className="mt-2 flex flex-wrap gap-1.5">
           <Chip className="bg-white/15 text-white">Pemanggilan ke-{current.callCount}</Chip>
           <Chip className="bg-white/15 text-white">Speaker aktif</Chip>
-          {current.qrCode && <Chip className="bg-white/15 text-white">Sistem QR</Chip>}
+
         </div>
       </div>
 
