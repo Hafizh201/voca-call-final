@@ -6,7 +6,7 @@ import { z } from "zod";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
-import { getDraft } from "./pickup.form.$method";
+import { getDraft, resetDraft } from "@/lib/pickup/draft";
 import { students } from "@/lib/dummy/data";
 import { submitPickup } from "@/lib/pickup/simulator";
 import { formatPlate } from "@/lib/format/utils";
@@ -82,6 +82,7 @@ function PreviewPage() {
       platform: draft.platform,
       plate: formatPlate(draft.plate),
     });
+    resetDraft();
     nav({ to: "/monitoring" });
   };
 

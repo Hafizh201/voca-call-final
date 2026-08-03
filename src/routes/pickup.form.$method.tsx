@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { usePageReady } from "@/hooks/use-page-ready";
 import { FormSkeleton } from "@/components/feedback/Skeletons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
@@ -12,6 +12,7 @@ import { students, friends, dismissalFor, type Student, type Friend } from "@/li
 import { isValidPlate } from "@/lib/format/utils";
 import { Users, Clock, Megaphone, QrCode } from "lucide-react";
 import { QrGuideDialog } from "@/components/pickup/QrGuideDialog";
+import { getDraft, setDraft, type PickupDraft } from "@/lib/pickup/draft";
 
 const searchSchema = z.object({ s: z.string().optional(), f: z.string().optional() });
 
@@ -28,32 +29,22 @@ export const Route = createFileRoute("/pickup/form/$method")({
   component: FormPage,
 });
 
-const draft = {
-  method: "self" as "self" | "other" | "ojek",
-  note: "",
-  noteExtras: [] as string[],
-  estimate: "sudah",
-  waitLocation: "Gerbang Utama",
-  pickerName: "",
-  relation: "Kakek",
-  driverName: "",
-  platform: "Gojek" as "Gojek" | "Grab" | "Maxim" | "InDrive",
-  plate: "",
-};
-
-let draftMemo = { ...draft };
-
 function FormPage() {
   const ready = usePageReady();
   const { method } = Route.useParams() as { method: "self" | "other" | "ojek" };
   const { s, f } = Route.useSearch();
   const nav = useNavigate();
-  const [state, setState] = useState({ ...draftMemo, method });
+  const [state, setState] = useState<PickupDraft>(() => ({ ...getDraft(), method }));
   const [noteValid, setNoteValid] = useState(true);
   const [qrAsk, setQrAsk] = useState(false);
+
+  useEffect(() => {
+    setDraft({ ...state, method });
+  }, [state, method]);
+
   if (!ready) return <FormSkeleton />;
 
-  const set = <K extends keyof typeof state>(k: K, v: (typeof state)[K]) =>
+  const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
     setState((p) => ({ ...p, [k]: v }));
 
   const studentIds = (s ?? students.filter((x) => !x.pendingApproval)[0].id).split(",");
@@ -262,7 +253,7 @@ function FormPage() {
         <BigButton
           disabled={!canNext}
           onClick={() => {
-            draftMemo = state;
+            setDraft({ ...state, method });
             nav({
               to: "/pickup/preview",
               search: {
@@ -277,8 +268,4 @@ function FormPage() {
       </div>
     </PhoneShell>
   );
-}
-
-export function getDraft() {
-  return draftMemo;
 }

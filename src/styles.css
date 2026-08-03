@@ -123,6 +123,21 @@
   [data-elderly="true"] a {
     min-height: 52px;
   }
+
+  /* Aksesibilitas */
+  [data-text-scale="besar"] { font-size: 112.5%; }
+  [data-text-scale="sangat-besar"] { font-size: 125%; }
+  [data-contrast="true"] {
+    --border: oklch(0.35 0.02 260);
+    --muted-foreground: oklch(0.35 0.02 260);
+  }
+  [data-reduce-motion="true"] *,
+  [data-reduce-motion="true"] *::before,
+  [data-reduce-motion="true"] *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }
 
 @utility shadow-card { box-shadow: var(--shadow-card); }

@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 type Listener = () => void;
 
-function createStore<T>(key: string, initial: T) {
+export function createStore<T>(key: string, initial: T) {
   let state: T = initial;
   const listeners = new Set<Listener>();
 
@@ -46,8 +46,23 @@ export const useSession = () =>
   useSyncExternalStore(sessionStore.subscribe, sessionStore.get, serverSnapshot(sessionInitial));
 
 // ============ SETTINGS ============
-export type SettingsState = { elderlyMode: boolean; darkMode: boolean; notifications: boolean };
-const settingsInitial: SettingsState = { elderlyMode: false, darkMode: false, notifications: true };
+export type TextScale = "normal" | "besar" | "sangat-besar";
+export type SettingsState = {
+  elderlyMode: boolean;
+  darkMode: boolean;
+  notifications: boolean;
+  textScale: TextScale;
+  highContrast: boolean;
+  reduceMotion: boolean;
+};
+const settingsInitial: SettingsState = {
+  elderlyMode: false,
+  darkMode: false,
+  notifications: true,
+  textScale: "normal",
+  highContrast: false,
+  reduceMotion: false,
+};
 export const settingsStore = createStore<SettingsState>("panggil.settings", settingsInitial);
 export const useSettings = () =>
   useSyncExternalStore(settingsStore.subscribe, settingsStore.get, serverSnapshot(settingsInitial));
