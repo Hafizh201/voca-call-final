@@ -14,6 +14,8 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+
 import { pickupStore, useActivePickup, STAGE_ORDER, type PickupStage } from "@/lib/state/stores";
 import { nowHHmm } from "@/lib/format/utils";
 import { students } from "@/lib/dummy/data";
@@ -68,7 +70,8 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
 
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
-  const [autoMode, setAutoMode] = useState(true);
+  const [autoMode, setAutoMode] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [state, setState] = useState<GpsState>("searching");
   const [distance, setDistance] = useState<number>(DISTANCE_SEQUENCE[0]);
   const [stepIndex, setStepIndex] = useState(0);
@@ -76,6 +79,7 @@ export function AutoPickupGeofence() {
 
   // initial GPS "search"
   useEffect(() => {
+    if (!autoMode) return;
     if (state !== "searching") return;
     const t = setTimeout(() => {
       setState("outside");
@@ -83,11 +87,14 @@ export function AutoPickupGeofence() {
     }, 1800);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [autoMode, state]);
+
 
   // distance progression when tracking
   useEffect(() => {
+    if (!autoMode) return;
     if (state === "searching" || state === "unavailable" || state === "arrived") return;
+
     const t = setTimeout(() => {
       const next = Math.min(stepIndex + 1, DISTANCE_SEQUENCE.length - 1);
       const nextD = DISTANCE_SEQUENCE[next];
@@ -102,12 +109,14 @@ export function AutoPickupGeofence() {
       }
     }, 2200);
     return () => clearTimeout(t);
-  }, [stepIndex, state]);
+  }, [stepIndex, state, autoMode]);
 
   // when arriving with auto mode, run smart auto call sequence
   useEffect(() => {
+    if (!autoMode) return;
     if (state !== "arrived" || firedRef.current) return;
     firedRef.current = true;
+
     appendTimeline("Memasuki radius sekolah", "verified");
     if (!autoMode) return;
     const steps: { at: number; label: string; stage: PickupStage }[] = [
@@ -129,6 +138,17 @@ export function AutoPickupGeofence() {
     setState("searching");
   }
 
+  function enableAutoMode() {
+    retry();
+    setAutoMode(true);
+  }
+
+  function disableAutoMode() {
+    setAutoMode(false);
+    retry();
+  }
+
+
   function simulateUnavailable() {
     setState("unavailable");
   }
@@ -146,80 +166,8 @@ export function AutoPickupGeofence() {
     <div className="mx-5 mt-5 space-y-4">
       {/* Safety banner */}
       <SafetyBanner dismissed={dismissed} studentName={firstStudent?.nickname ?? "Siswa"} />
-{/* Pickup detection card */}
-      <div className={cn(
-        "relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br p-5 shadow-card",
-        tone.bg,
-      )}>
-        <div className="flex items-start gap-4">
-          <div className="relative shrink-0">
-            <Radar state={state} pct={pct} />
-          </div>
-          <div className=" ml-[-5px] min-w-0 flex-1">
-            <div className="ml-[-5px] flex items-center gap-2">
-              <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", tone.chip)}>
-                <StateIcon state={state} />
-                {tone.label}
-              </span>
-            </div>
-            <h3 className={cn("mt-2 ml-[-5px] font-display text-base font-bold leading-tight", tone.text)}>
-              {titleFor(state)}
-            </h3>
-            <p className="mt-1 ml-[-5px] text-[11px] leading-relaxed text-muted-foreground">
-              {descriptionFor(state)}
-            </p>
-
-            {(state === "outside" || state === "approaching") && (
-              <div className="mt-1 ml-[-5px]">
-                <div className="flex items-end justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Jarak ke sekolah</span>
-                  <span className={cn("font-display text-xl font-bold tabular-nums", tone.text)}>
-                    {formatDistance(distance)}
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
-                  <div
-                    className={cn("h-full rounded-full transition-all duration-700", state === "approaching" ? "bg-accent" : "bg-primary")}
-                    style={{ width: `${pct * 100}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {state === "searching" && (
-              <div className="mt-3 ml-[-5px] flex items-center gap-2 text-[11px] text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>Mengambil sinyal GPS…</span>
-              </div>
-            )}
-
-            {state === "unavailable" && (
-              <div className="mt-3 space-y-2">
-                <ul className="space-y-1 text-[11px] text-muted-foreground">
-                  <li className="flex items-center gap-2"><MapPin className="h-3 w-3" /> GPS aktif</li>
-                  <li className="flex items-center gap-2"><ShieldAlert className="h-3 w-3" /> Izin lokasi diberikan</li>
-                  <li className="flex items-center gap-2"><Wifi className="h-3 w-3" /> Internet tersedia</li>
-                </ul>
-                <button
-                  onClick={retry}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-warning px-3 py-1.5 text-[11px] font-bold text-warning-foreground shadow-card active:scale-95"
-                >
-                  <RefreshCw className="h-3 w-3" /> Coba Lagi
-                </button>
-              </div>
-            )}
-
-            {state === "arrived" && (
-              <div className="mt-3 ml-[-10px] flex items-center gap-2 rounded-sm bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
-                <CheckCircle2 className="h-4 w-4 animate-pop" />
-                Sistem mengirim permintaan pemanggilan otomatis.
-              </div>
-            )}
-           
-          </div>
-        </div>
- {/* Auto pickup toggle card */}
-      <div className="mt-5 rounded-3xl border border-border bg-surface p-4 shadow-card">
+      {/* Auto pickup toggle card */}
+      <div className="rounded-3xl border border-border bg-surface p-4 shadow-card">
         <div className="flex items-center gap-3">
           <div className={cn(
             "grid h-11 w-11 place-items-center rounded-2xl transition",
@@ -233,7 +181,7 @@ export function AutoPickupGeofence() {
           </div>
           <Switch
             checked={autoMode}
-            onCheckedChange={setAutoMode}
+            onCheckedChange={(v) => (v ? setConfirmOpen(true) : disableAutoMode())}
             className="h-6 w-11 data-[state=checked]:bg-primary [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
           />
         </div>
@@ -246,23 +194,98 @@ export function AutoPickupGeofence() {
             : "Mode lokasi dimatikan. Anda harus melakukan pemanggilan secara manual menggunakan tombol di bawah."}
         </p>
       </div>
-        {/* dev helper 
-        {state !== "unavailable" && state !== "arrived" && (
-          <button
-            onClick={simulateUnavailable}
-            className="absolute right-3 top-3 text-[10px] font-semibold text-muted-foreground/60 hover:text-muted-foreground"
-          >
-            Simulasi error
-          </button>
-        )}*/}
-      </div>
-      
 
-      
+      {/* Pickup detection card — hanya tampil setelah Panggil Otomatis dinyalakan */}
+      {autoMode && (
+        <div
+          className={cn(
+            "relative animate-fade-in overflow-hidden rounded-3xl border border-border bg-gradient-to-br p-5 shadow-card transition-colors duration-500",
+            tone.bg,
+          )}
+        >
+          <div className="flex items-start gap-4">
+            <div className="relative shrink-0">
+              <Radar state={state} pct={pct} />
+            </div>
+            <div className="ml-[-5px] min-w-0 flex-1">
+              <div className="ml-[-5px] flex items-center gap-2">
+                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", tone.chip)}>
+                  <StateIcon state={state} />
+                  {tone.label}
+                </span>
+              </div>
+              <h3 className={cn("mt-2 ml-[-5px] font-display text-base font-bold leading-tight", tone.text)}>
+                {titleFor(state)}
+              </h3>
+              <p className="mt-1 ml-[-5px] text-[11px] leading-relaxed text-muted-foreground">
+                {descriptionFor(state)}
+              </p>
 
-      {/* Monitoring summary 
-      <MonitoringSummary state={state} autoMode={autoMode} distance={distance} dismissed={dismissed} />*/}
+              {(state === "outside" || state === "approaching") && (
+                <div className="mt-1 ml-[-5px]">
+                  <div className="flex items-end justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Jarak ke sekolah</span>
+                    <span className={cn("font-display text-xl font-bold tabular-nums", tone.text)}>
+                      {formatDistance(distance)}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                    <div
+                      className={cn("h-full rounded-full transition-all duration-700", state === "approaching" ? "bg-accent" : "bg-primary")}
+                      style={{ width: `${pct * 100}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {state === "searching" && (
+                <div className="mt-3 ml-[-5px] flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Mengambil sinyal GPS…</span>
+                </div>
+              )}
+
+              {state === "unavailable" && (
+                <div className="mt-3 space-y-2">
+                  <ul className="space-y-1 text-[11px] text-muted-foreground">
+                    <li className="flex items-center gap-2"><MapPin className="h-3 w-3" /> GPS aktif</li>
+                    <li className="flex items-center gap-2"><ShieldAlert className="h-3 w-3" /> Izin lokasi diberikan</li>
+                    <li className="flex items-center gap-2"><Wifi className="h-3 w-3" /> Internet tersedia</li>
+                  </ul>
+                  <button
+                    onClick={retry}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-warning px-3 py-1.5 text-[11px] font-bold text-warning-foreground shadow-card active:scale-95"
+                  >
+                    <RefreshCw className="h-3 w-3" /> Coba Lagi
+                  </button>
+                </div>
+              )}
+
+              {state === "arrived" && (
+                <div className="mt-3 ml-[-10px] flex items-center gap-2 rounded-sm bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
+                  <CheckCircle2 className="h-4 w-4 animate-pop" />
+                  Sistem mengirim permintaan pemanggilan otomatis.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Aktifkan Panggil Otomatis?"
+        description="Lokasi Anda akan dipantau selama perjalanan. Saat memasuki radius sekolah, sistem otomatis mengirim permintaan penjemputan tanpa perlu menekan tombol."
+        confirmLabel="Ya, aktifkan"
+        cancelLabel="Batal"
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => {
+          setConfirmOpen(false);
+          enableAutoMode();
+        }}
+      />
     </div>
+
   );
 }
 
