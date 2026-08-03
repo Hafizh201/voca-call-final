@@ -7,6 +7,8 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { students } from "@/lib/dummy/data";
 import { IconBadge, Chip } from "@/components/common/Section";
 import { ClipboardCheck, ClipboardList } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/attendance-today")({
   head: () => ({
@@ -22,12 +24,31 @@ export const Route = createFileRoute("/attendance-today")({
 
 function Attendance() {
   const ready = usePageReady();
+  const [pick, setPick] = useState<string>("all");
   if (!ready) return <PageSkeleton />;
+  const list = pick === "all" ? students : students.filter((s) => s.id === pick);
   return (
     <PhoneShell>
       <TopBar title="Presensi Hari Ini" back="/dashboard" subtitle="Diperbarui otomatis" />
       <div className="space-y-3 p-5">
-        {students.map((s) => {
+        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          {[{ id: "all", nickname: "Semua" }, ...students].map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => setPick(o.id)}
+              className={cn(
+                "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition active:scale-95",
+                pick === o.id
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-surface text-foreground",
+              )}
+            >
+              {o.nickname}
+            </button>
+          ))}
+        </div>
+        {list.map((s) => {
           const tone = s.dismissStatus === "sudah" ? "success" : s.attendanceStatus === "hadir" ? "warm" : "muted";
           return (
             <div key={s.id} className="rounded-3xl border border-border bg-surface p-4 shadow-card">
