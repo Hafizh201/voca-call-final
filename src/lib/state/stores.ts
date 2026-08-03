@@ -85,6 +85,8 @@ export type PickupRequest = {
   cooldownStartedAt: number | null;
   secondCallExtras: string[];
   callCount: number;
+  scanCount?: number;
+  lastScannedAt?: number | null;
 };
 
 export type ActivePickupState = { current: PickupRequest | null; history: PickupRequest[] };
