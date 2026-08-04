@@ -71,11 +71,16 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
   const [autoMode, setAutoMode] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const selectableStudents = useMemo(() => students.filter((s) => !s.pendingApproval), []);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [draftIds, setDraftIds] = useState<string[]>([]);
+  const selectedStudents = selectableStudents.filter((s) => selectedIds.includes(s.id));
   const [state, setState] = useState<GpsState>("searching");
   const [distance, setDistance] = useState<number>(DISTANCE_SEQUENCE[0]);
   const [stepIndex, setStepIndex] = useState(0);
   const firedRef = useRef(false);
+
 
   // initial GPS "search"
   useEffect(() => {
