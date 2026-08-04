@@ -7,7 +7,7 @@ import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { SmartNoteAssistant } from "@/components/pickup/SmartNoteAssistant";
-import { PlateInput, TextField, SelectField } from "@/components/pickup/Fields";
+import { PlateInput, TextField, SelectField, DropdownField } from "@/components/pickup/Fields";
 import { students, friends, dismissalFor, type Student, type Friend } from "@/lib/dummy/data";
 import { isValidPlate } from "@/lib/format/utils";
 import { Users, Clock, Megaphone, QrCode } from "lucide-react";
