@@ -171,12 +171,12 @@ function FormPage() {
             label="Lokasi menunggu"
             value={state.waitLocation}
             onChange={(v) => set("waitLocation", v)}
-            hint="Contoh: Gerbang Utama, Parkir Timur"
+            hint="Contoh: Gerbang Utama, Parkir, Pos satpam"
           />
         )}
 
         <SelectField
-          label={method === "self" ? "Estimasi kedatangan" : "Cara kedatangan"}
+          label={method === "self" ? "Pemanggilan" : "Pemanggilan"}
           value={state.estimate as string}
           onChange={(v) => {
             if (v === "qr") {
@@ -190,10 +190,7 @@ function FormPage() {
               ? [
                   { value: "sudah", label: "Sudah Sampai" },
                   { value: "qr", label: "Sistem QR" },
-                  { value: "5", label: "≤ 5 menit" },
-                  { value: "10", label: "10 menit" },
-                  { value: "15", label: "15 menit" },
-                  { value: "20", label: "20 menit" },
+                  { value: "5", label: "Dalam ≤ 5 menit" },
                 ]
               : [
                   { value: "sudah", label: "Sudah Sampai" },
