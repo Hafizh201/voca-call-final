@@ -79,17 +79,7 @@ function LoginUsername() {
 
         {/* Button */}
         <div className="mt-auto pb-10 pt-8">
-          <BigButton
-            disabled={!canContinue}
-            onClick={() => {
-              sessionStore.set({
-                username: `@${username.trim()}`,
-                signedIn: false,
-              });
-
-              nav({ to: "/login/pin" });
-            }}
-          >
+          
             Lanjut
           </BigButton>
         </div>
