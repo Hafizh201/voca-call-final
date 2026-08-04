@@ -138,7 +138,15 @@ export function AutoPickupGeofence() {
     setState("searching");
   }
 
-  function enableAutoMode() {
+  function openSheet() {
+    setDraftIds(selectedIds);
+    setSheetOpen(true);
+  }
+
+  function confirmSheet() {
+    if (draftIds.length === 0) return;
+    setSelectedIds(draftIds);
+    setSheetOpen(false);
     retry();
     setAutoMode(true);
   }
@@ -147,6 +155,7 @@ export function AutoPickupGeofence() {
     setAutoMode(false);
     retry();
   }
+
 
 
   function simulateUnavailable() {
