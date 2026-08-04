@@ -54,7 +54,6 @@ function PreviewPage() {
     ...(draft.method === "other"
       ? [
           ["Penjemput", draft.pickerName] as [string, string],
-          ["Hubungan", draft.relation] as [string, string],
         ]
       : []),
     ...(draft.method === "ojek"
@@ -77,7 +76,6 @@ function PreviewPage() {
       estimate: draft.estimate,
       waitLocation: draft.waitLocation,
       pickerName: draft.pickerName,
-      relation: draft.relation,
       driverName: draft.driverName,
       platform: draft.platform,
       plate: formatPlate(draft.plate),

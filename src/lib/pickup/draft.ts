@@ -8,7 +8,6 @@ export type PickupDraft = {
   estimate: string;
   waitLocation: string;
   pickerName: string;
-  relation: string;
   driverName: string;
   platform: "Gojek" | "Grab" | "Maxim" | "InDrive";
   plate: string;
@@ -18,10 +17,9 @@ export const DRAFT_INITIAL: PickupDraft = {
   method: "self",
   note: "",
   noteExtras: [],
-  estimate: "sudah",
+  estimate: "",
   waitLocation: "Gerbang Utama",
   pickerName: "",
-  relation: "Kakek",
   driverName: "",
   platform: "Gojek",
   plate: "",

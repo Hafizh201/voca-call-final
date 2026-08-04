@@ -354,17 +354,9 @@ function Radar({ state, pct }: { state: GpsState; pct: number }) {
 
 function SafetyBanner({ dismissed, studentName }: { dismissed: boolean; studentName: string }) {
   return (
-    <div
-      className={cn(
-        "rounded-3xl border p-4 text-xs leading-relaxed shadow-card",
-        dismissed
-          ? "border-success/30 bg-success/10 text-success-foreground"
-          : "border-warning/40 bg-warning/15 text-warning-foreground",
-      )}
-    >
+    <div>
       {dismissed
-        ? `${studentName} sudah presensi pulang dan siap dijemput.`
-        : `${studentName} belum presensi pulang. Panggilan akan diproses setelah presensi.`}
+}
     </div>
   );
 }

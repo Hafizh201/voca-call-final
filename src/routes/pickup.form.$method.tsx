@@ -78,7 +78,7 @@ function FormPage() {
     method === "self"
       ? `dijemput orang tua/wali di ${state.waitLocation || "gerbang utama"}`
       : method === "other"
-        ? `dijemput oleh ${state.pickerName || "penjemput"} (${state.relation})`
+        ? `dijemput oleh ${state.pickerName || "penjemput"}`
         : `dijemput driver ${state.platform} ${state.driverName || ""} ${state.plate}`.trim()
   }. Mohon segera menuju area penjemputan.${noteTail ? ` ${noteTail}` : ""}`;
 
@@ -133,7 +133,7 @@ function FormPage() {
         {method === "other" && (
           <>
             <TextField label="Siapa yang menjemput Ananda?" value={state.pickerName} onChange={(v) => set("pickerName", v)} placeholder="Penjemput | Contoh: Om Fulan" />
-            {/*<SelectField
+            {/*z<SelectField
               label="Hubungan dengan siswa"
               value={state.relation as "Kakek" | "Nenek" | "Paman" | "Bibi" | "Saudara"}
               onChange={(v) => set("relation", v)}
