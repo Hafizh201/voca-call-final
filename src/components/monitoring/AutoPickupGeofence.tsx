@@ -135,9 +135,19 @@ export function AutoPickupGeofence() {
       { at: 2200, label: "Data terkirim ke sistem", stage: "processed" },
       { at: 3000, label: "Menunggu verifikasi petugas", stage: "queued" },
     ];
+    const names = selectedStudents.map((s) => s.nickname).join(", ");
     const timers = steps.map((s) =>
       setTimeout(() => appendTimeline(s.label, s.stage), s.at),
     );
+    timers.push(
+      setTimeout(() => {
+        appendTimeline("Pemanggilan diumumkan", "announcing");
+        toast.success("Ananda sudah dipanggil", {
+          description: names ? `${names} dipanggil melalui speaker sekolah.` : undefined,
+        });
+      }, 3800),
+    );
+
     return () => timers.forEach(clearTimeout);
   }, [state, autoMode]);
 
