@@ -15,6 +15,8 @@ import { useSession, useActivePickup } from "@/lib/state/stores";
 import { greeting } from "@/lib/format/utils";
 import { PhoneCall, History, ClipboardList, Wifi, Bell, LifeBuoy } from "lucide-react";
 import { AutoPickupGeofence } from "@/components/monitoring/AutoPickupGeofence";
+import { NotificationsFloating } from "@/components/notifications/NotificationsFloating";
+
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
