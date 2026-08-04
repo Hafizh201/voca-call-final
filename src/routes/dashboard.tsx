@@ -56,10 +56,9 @@ function DashboardContent() {
         </div>
         <div className="flex items-center gap-2">
           <Chip tone="success"><Wifi className="h-3 w-3" /> Terhubung</Chip>
-          <Link to="/notifications" className="grid h-10 w-10 place-items-center rounded-2xl bg-surface-2 text-foreground shadow-card">
-            <Bell className="h-5 w-5" />
-          </Link>
+          <NotificationsFloating />
         </div>
+
       </div>
 
       <OfflineBanner />
