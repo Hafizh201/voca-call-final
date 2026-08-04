@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import {
   MapPin,
@@ -12,9 +14,12 @@ import {
   ShieldAlert,
   X,
   Clock,
+  Users,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { BottomSheet } from "@/components/common/BottomSheet";
+
 
 import { pickupStore, useActivePickup, STAGE_ORDER, type PickupStage } from "@/lib/state/stores";
 import { nowHHmm } from "@/lib/format/utils";
@@ -71,11 +76,16 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
   const [autoMode, setAutoMode] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const selectableStudents = useMemo(() => students.filter((s) => !s.pendingApproval), []);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [draftIds, setDraftIds] = useState<string[]>([]);
+  const selectedStudents = selectableStudents.filter((s) => selectedIds.includes(s.id));
   const [state, setState] = useState<GpsState>("searching");
   const [distance, setDistance] = useState<number>(DISTANCE_SEQUENCE[0]);
   const [stepIndex, setStepIndex] = useState(0);
   const firedRef = useRef(false);
+
 
   // initial GPS "search"
   useEffect(() => {
@@ -125,9 +135,19 @@ export function AutoPickupGeofence() {
       { at: 2200, label: "Data terkirim ke sistem", stage: "processed" },
       { at: 3000, label: "Menunggu verifikasi petugas", stage: "queued" },
     ];
+    const names = selectedStudents.map((s) => s.nickname).join(", ");
     const timers = steps.map((s) =>
       setTimeout(() => appendTimeline(s.label, s.stage), s.at),
     );
+    timers.push(
+      setTimeout(() => {
+        appendTimeline("Pemanggilan diumumkan", "announcing");
+        toast.success("Ananda sudah dipanggil", {
+          description: names ? `${names} dipanggil melalui speaker sekolah.` : undefined,
+        });
+      }, 3800),
+    );
+
     return () => timers.forEach(clearTimeout);
   }, [state, autoMode]);
 
@@ -138,7 +158,15 @@ export function AutoPickupGeofence() {
     setState("searching");
   }
 
-  function enableAutoMode() {
+  function openSheet() {
+    setDraftIds(selectedIds);
+    setSheetOpen(true);
+  }
+
+  function confirmSheet() {
+    if (draftIds.length === 0) return;
+    setSelectedIds(draftIds);
+    setSheetOpen(false);
     retry();
     setAutoMode(true);
   }
@@ -147,6 +175,7 @@ export function AutoPickupGeofence() {
     setAutoMode(false);
     retry();
   }
+
 
 
   function simulateUnavailable() {
@@ -231,9 +260,17 @@ export function AutoPickupGeofence() {
                 )}
 
                 {state === "arrived" && (
-                  <div className="mt-3 flex items-center gap-2 rounded-2xl bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
-                    <CheckCircle2 className="h-4 w-4 animate-pop" />
-                    Sistem mengirim permintaan pemanggilan otomatis.
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 rounded-2xl bg-success/15 px-3 py-2 text-[11px] font-semibold text-success-foreground">
+                      <CheckCircle2 className="h-4 w-4 animate-pop" />
+                      Ananda sudah dipanggil melalui speaker sekolah.
+                    </div>
+                    <Link
+                      to="/monitoring"
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-xs font-bold text-primary-foreground shadow-card transition active:scale-95"
+                    >
+                      <Megaphone className="h-4 w-4" /> Lihat Halaman Pemanggilan
+                    </Link>
                   </div>
                 )}
               </div>
@@ -245,20 +282,43 @@ export function AutoPickupGeofence() {
           <div className="flex items-center gap-3">
             <div className={cn(
               "grid h-11 w-11 shrink-0 place-items-center rounded-2xl transition",
-              autoMode ? "bg-surface-2 text-primary" : "bg-surface-2 text-muted-foreground",
+              autoMode ? "bg-primary/10 text-primary" : "bg-surface-2 text-muted-foreground",
             )}>
               <Navigation className={cn("h-5 w-5 transition", autoMode && "animate-pulse")} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="font-display text-sm font-bold text-ink">Panggil Otomatis</p>
-              <p className="text-[11px] text-muted-foreground">Matikan jika ingin memanggil secara manual.</p>
+              <p className="text-[11px] text-muted-foreground">
+                {autoMode ? "Aktif untuk anak yang dipilih." : "Matikan jika ingin memanggil secara manual."}
+              </p>
             </div>
             <Switch
               checked={autoMode}
-              onCheckedChange={(v) => (v ? setConfirmOpen(true) : disableAutoMode())}
+              onCheckedChange={(v) => (v ? openSheet() : disableAutoMode())}
               className="h-6 w-11 shrink-0 data-[state=checked]:bg-primary [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
             />
           </div>
+
+          {autoMode && selectedStudents.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {selectedStudents.map((s) => (
+                <span
+                  key={s.id}
+                  className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary"
+                >
+                  <Users className="h-3 w-3" /> {s.nickname}
+                </span>
+              ))}
+              <button
+                type="button"
+                onClick={openSheet}
+                className="rounded-full border border-border px-2.5 py-1 text-[10px] font-bold text-muted-foreground active:scale-95"
+              >
+                Ubah
+              </button>
+            </div>
+          )}
+
           <p className={cn(
             "mt-3 rounded-2xl px-3 py-2 text-[11px] leading-relaxed transition",
             autoMode ? "bg-surface-2 text-muted-foreground" : "bg-warning/15 text-warning-foreground",
@@ -270,19 +330,64 @@ export function AutoPickupGeofence() {
         </div>
       </div>
 
+      <BottomSheet
+        open={sheetOpen}
+        title="Pilih anak yang dijemput"
+        description="Wajib pilih minimal satu anak sebelum Panggil Otomatis diaktifkan."
+        onClose={() => setSheetOpen(false)}
+        footer={
+          <button
+            type="button"
+            disabled={draftIds.length === 0}
+            onClick={confirmSheet}
+            className={cn(
+              "w-full rounded-2xl px-4 py-3.5 text-sm font-bold transition active:scale-95",
+              draftIds.length === 0
+                ? "bg-surface-2 text-muted-foreground"
+                : "bg-primary text-primary-foreground shadow-card",
+            )}
+          >
+            {draftIds.length === 0 ? "Pilih anak dulu" : `Aktifkan untuk ${draftIds.length} anak`}
+          </button>
+        }
+      >
+        <ul className="space-y-2">
+          {selectableStudents.map((s) => {
+            const active = draftIds.includes(s.id);
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraftIds((p) => (p.includes(s.id) ? p.filter((x) => x !== s.id) : [...p, s.id]))
+                  }
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.98]",
+                    active ? "border-primary bg-primary/5" : "border-border bg-surface-2",
+                  )}
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-surface font-display text-sm font-bold text-ink">
+                    {s.name[0]}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-display text-sm font-bold text-ink">{s.name}</span>
+                    <span className="block text-[11px] text-muted-foreground">Kelas {s.className}</span>
+                  </span>
+                  <span
+                    className={cn(
+                      "grid h-6 w-6 shrink-0 place-items-center rounded-full border transition",
+                      active ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                    )}
+                  >
+                    {active && <CheckCircle2 className="h-4 w-4" />}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </BottomSheet>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Aktifkan Panggil Otomatis?"
-        description="Lokasi Anda akan dipantau selama perjalanan. Saat memasuki radius sekolah, sistem otomatis mengirim permintaan penjemputan tanpa perlu menekan tombol."
-        confirmLabel="Ya, aktifkan"
-        cancelLabel="Batal"
-        onCancel={() => setConfirmOpen(false)}
-        onConfirm={() => {
-          setConfirmOpen(false);
-          enableAutoMode();
-        }}
-      />
     </div>
 
   );

@@ -1,5 +1,42 @@
+import { ChevronDown } from "lucide-react";
 import { formatPlate, isValidPlate } from "@/lib/format/utils";
 import { cn } from "@/lib/utils";
+
+export function DropdownField({
+  label,
+  value,
+  onChange,
+  options,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  hint?: string;
+}) {
+  return (
+    <div className="space-y-1">
+      <label className="px-1 text-xs font-semibold text-muted-foreground">{label}</label>
+      <div className="relative rounded-2xl border border-border bg-surface shadow-card">
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full appearance-none rounded-2xl bg-transparent px-3 py-3.5 pr-10 text-sm font-semibold text-ink outline-none"
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      </div>
+      {hint && <p className="px-1 text-[11px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
 
 export function PlateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const formatted = formatPlate(value);

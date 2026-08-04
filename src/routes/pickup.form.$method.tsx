@@ -7,7 +7,7 @@ import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { SmartNoteAssistant } from "@/components/pickup/SmartNoteAssistant";
-import { PlateInput, TextField, SelectField } from "@/components/pickup/Fields";
+import { PlateInput, TextField, SelectField, DropdownField } from "@/components/pickup/Fields";
 import { students, friends, dismissalFor, type Student, type Friend } from "@/lib/dummy/data";
 import { isValidPlate } from "@/lib/format/utils";
 import { Users, Clock, Megaphone, QrCode } from "lucide-react";
@@ -167,13 +167,21 @@ function FormPage() {
         )}
 
         {method === "self" && (
-          <TextField
+          <DropdownField
             label="Lokasi menunggu"
             value={state.waitLocation}
             onChange={(v) => set("waitLocation", v)}
-            hint="Contoh: Gerbang Utama, Parkir, Pos satpam"
+            options={[
+              { value: "Gerbang Utama", label: "Gerbang Utama" },
+              { value: "Gerbang Belakang", label: "Gerbang Belakang" },
+              { value: "Area Parkir", label: "Area Parkir" },
+              { value: "Pos Satpam", label: "Pos Satpam" },
+              { value: "Lobi Sekolah", label: "Lobi Sekolah" },
+            ]}
+            hint="Pilih titik tunggu agar petugas mudah mengarahkan Ananda."
           />
         )}
+
 
         <SelectField
           label={method === "self" ? "Pemanggilan" : "Pemanggilan"}
