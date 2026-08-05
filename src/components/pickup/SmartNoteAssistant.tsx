@@ -83,7 +83,7 @@ export function SmartNoteAssistant({
             </span>
             <div>
               <p className="font-display text-sm font-bold text-ink">Catatan Penting</p>
-              <p className="text-[11px] text-muted-foreground">Terpisah dari catatan di atas</p>
+              <p className="text-[11px] text-muted-foreground">Pilih </p>
             </div>
           </div>
           <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">

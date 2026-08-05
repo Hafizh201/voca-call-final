@@ -160,6 +160,8 @@ function FormPage() {
                 { value: "Grab", label: "Grab" },
                 { value: "Maxim", label: "Maxim" },
                 { value: "InDrive", label: "InDrive" },
+                { value: "MaxRide", label: "MaxRide" },
+                { value: "JogjaKita", label: "JogjaKita" },
               ]}
             />
             <PlateInput value={state.plate} onChange={(v) => set("plate", v)} />
@@ -235,7 +237,7 @@ function FormPage() {
             setQrAsk(false);
           }}
         />
-
+{/*}
         <section className="rounded-3xl border border-primary/25 bg-primary/5 p-4">
           <div className="flex items-center gap-2">
             <span className="grid h-7 w-7 place-items-center rounded-xl bg-primary/15">
@@ -249,7 +251,7 @@ function FormPage() {
             “{callText}”
           </p>
         </section>
-
+*/}
         <div className="h-24" />
       </div>
 
@@ -268,7 +270,7 @@ function FormPage() {
             });
           }}
         >
-          Lanjut ke Ringkasan
+          Lanjut Pemrosesan
         </BigButton>
       </div>
     </PhoneShell>
