@@ -4,15 +4,13 @@ import { MonitoringSkeleton } from "@/components/feedback/Skeletons";
 import { useEffect, useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
-import { useActivePickup } from "@/lib/state/stores";
+import { useActivePickup, STAGE_LABELS } from "@/lib/state/stores";
 import {
   completeAndStartCooldown,
   finishAndArchive,
   triggerSecondCall,
 } from "@/lib/pickup/simulator";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { CircularCooldownTimer } from "@/components/monitoring/CircularCooldownTimer";
-
 import { QrOnlyMonitoring } from "@/components/monitoring/QrOnlyMonitoring";
 import { SectionHeader, IconBadge, Chip } from "@/components/common/Section";
 import {
@@ -33,6 +31,7 @@ import { BigButton } from "@/components/common/BigButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { students, secondCallOptions } from "@/lib/dummy/data";
 import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 const COOLDOWN_MS = 180_000;
 
@@ -50,7 +49,7 @@ export const Route = createFileRoute("/monitoring")({
 
 function Monitoring() {
   const ready = usePageReady();
-  const { current } = useActivePickup();
+const { current } = useActivePickup();
   const nav = useNavigate();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -61,6 +60,13 @@ function Monitoring() {
     if (current?.stage === "done" && current.cooldownStartedAt === null) {
       completeAndStartCooldown();
     }
+  }, [current]);
+
+  // Tick agar hitung mundur tetap berjalan saat cooldown aktif.
+  useEffect(() => {
+    if (!current || current.cooldownStartedAt === null) return;
+    const t = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(t);
   }, [current]);
 
   if (!ready) return <MonitoringSkeleton />;
@@ -80,21 +86,23 @@ function Monitoring() {
     );
   }
 
-  // Mode sistem QR: halaman hanya berisi QR + kode pemanggilan.
+// Mode sistem QR: halaman hanya berisi QR + kode pemanggilan.
   if (current.qrCode) {
     return <QrOnlyMonitoring current={current} />;
   }
-
-
   const inCooldown = current.cooldownStartedAt !== null;
   const startedAt = current.cooldownStartedAt ?? Date.now();
   const remaining = inCooldown ? Math.max(0, COOLDOWN_MS - (Date.now() - startedAt)) : COOLDOWN_MS;
-  const canRecall = inCooldown && remaining === 0;
+  const remainingMinutes = Math.floor(remaining / 60000);
+  const remainingSeconds = Math.floor((remaining % 60000) / 1000);
+const canRecall = inCooldown && remaining === 0;
+  // Progress cooldown: dari penuh (belum bisa panggil) turun ke 0 (sudah bisa panggil ulang).
+  const cooldownProgress = inCooldown ? Math.round((remaining / COOLDOWN_MS) * 100) : 0;
 
   const student = students.find((s) => s.id === current.studentIds[0]);
   const teacherNote =
     current.callCount >= 2 ? "Ananda masih menyelesaikan tugas di kelas, mohon menunggu sebentar." : null;
-  const lastLabel = current.timeline[current.timeline.length - 1]?.label;
+const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
   const isSelfPickup = current.method === "self";
   const pickerLabel =
     current.method === "ojek" ? "driver ojek online" : current.pickerName || "penjemput yang dipilih";
@@ -106,28 +114,30 @@ function Monitoring() {
       <div className="mx-5 mt-4 rounded-3xl bg-gradient-hero p-5 text-primary-foreground shadow-elevated">
         <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Status saat ini</p>
         <p className="font-display text-lg font-bold leading-tight">{lastLabel}</p>
-        <div className="mt-2 flex flex-wrap gap-1.5">
+<div className="mt-2 flex flex-wrap gap-1.5">
           <Chip className="bg-white/15 text-white">Pemanggilan ke-{current.callCount}</Chip>
           <Chip className="bg-white/15 text-white">Speaker aktif</Chip>
 
         </div>
       </div>
 
-      {inCooldown && (
-      <div className="mt-6 flex flex-col items-center px-5">
-        <CircularCooldownTimer
-          startedAt={startedAt}
-          durationMs={COOLDOWN_MS}
-          onDone={() => setTick((t) => t + 1)}
-        />
-        <p className="mt-3 text-center text-[11px] leading-relaxed text-muted-foreground">
-          {canRecall
-            ? "Anda sudah dapat memanggil ulang bila Ananda belum tiba."
-            : "Mohon menunggu — pemanggilan ulang tersedia setelah hitungan selesai."}
-        </p>
-      </div>
+{/* Progress bar cooldown panggil ulang — hanya tampil saat cooldown benar-benar berjalan */}
+      {inCooldown && !canRecall && (
+        <div className="mx-5 mt-4 rounded-3xl border border-border bg-surface p-4 shadow-card">
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              Bisa memanggil ulang dalam
+            </p>
+            <span className="font-display text-sm font-bold text-ink">
+              {remainingMinutes}:{remainingSeconds.toString().padStart(2, "0")}
+            </span>
+          </div>
+          <Progress value={cooldownProgress} className="mt-2 h-2.5" />
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Menunggu jeda sebelum bisa melakukan pemanggilan ulang.
+          </p>
+        </div>
       )}
-
 
       {student && (
         <>
@@ -191,21 +201,29 @@ function Monitoring() {
               </button>
             </div>
           </div>
+          <br /><br /><br />
         </>
       )}
 
-      <SectionHeader title="Status Sistem" className="mt-8" />
+      {/* <SectionHeader title="Status Sistem" className="mt-8" />
       <div className="mx-5 grid grid-cols-2 gap-3">
         <SystemTile icon={<Server className="h-4 w-4" />} title="Server" status="Normal" />
         <SystemTile icon={<Cpu className="h-4 w-4" />} title="AI" status="Aktif" />
         <SystemTile icon={<Volume2 className="h-4 w-4" />} title="Speaker" status="Tersedia" />
         <SystemTile icon={<Radio className="h-4 w-4" />} title="Antrean" status="2 permintaan" />
-      </div>
+      </div> */}
 
-      <div className="mx-5 mt-8 space-y-3 pb-8">
+      <div className="fixed bottom-0 left-1/2 z-40 w-full max-w-[430px] -translate-x-1/2 border-t bg-background/95 p-5 backdrop-blur">
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <BigButton disabled={!canRecall}>{canRecall ? "Panggil Lagi" : "Menunggu cooldown…"}</BigButton>
+            <BigButton 
+               disabled={!canRecall}>{canRecall
+    ? "Panggil Lagi"
+    : `Panggil ulang dalam ${remainingMinutes}:${remainingSeconds
+          .toString()
+          .padStart(2, "0")}`}
+          
+            </BigButton>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl">
             <SheetHeader>

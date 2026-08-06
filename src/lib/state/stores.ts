@@ -110,14 +110,44 @@ export const pickupStore = createStore<ActivePickupState>("panggil.pickup", pick
 export const useActivePickup = () =>
   useSyncExternalStore(pickupStore.subscribe, pickupStore.get, serverSnapshot(pickupInitial));
 
+// ============ STUDENT PICKUP STATUS (real-time) ============
+// Melacak status "dijemput" & jumlah panggilan per siswa secara real-time.
+export type StudentPickupStatus = {
+  callCount: number;
+  dismissed: boolean;
+};
+export type StudentStatusMap = Record<string, StudentPickupStatus>;
+const studentStatusInitial: StudentStatusMap = {};
+export const studentStatusStore = createStore<StudentStatusMap>("panggil.studentStatus", studentStatusInitial);
+export const useStudentStatus = () =>
+  useSyncExternalStore(studentStatusStore.subscribe, studentStatusStore.get, serverSnapshot(studentStatusInitial));
+
+export function markStudentCalled(studentIds: string[], callCount: number) {
+  const s = studentStatusStore.get();
+  const next = { ...s };
+  for (const id of studentIds) {
+    next[id] = { callCount, dismissed: next[id]?.dismissed ?? false };
+  }
+  studentStatusStore.set(next);
+}
+
+export function markStudentPickedUp(studentIds: string[]) {
+  const s = studentStatusStore.get();
+  const next = { ...s };
+  for (const id of studentIds) {
+    next[id] = { callCount: next[id]?.callCount ?? 0, dismissed: true };
+  }
+  studentStatusStore.set(next);
+}
+
 export const STAGE_LABELS: Record<PickupStage, string> = {
   received: "Permintaan diterima",
   verified: "Data diverifikasi",
   processed: "Data sedang diproses",
   generated: "Kalimat pemanggilan dibuat",
   queued: "Menunggu speaker tersedia",
-  announcing: "Sedang dipanggil",
-  done: "Pemanggilan selesai",
+announcing: "Sedang dipanggil",
+  done: "Sedang Proses Pemanggilan",
 };
 
 export const STAGE_ORDER: PickupStage[] = [

@@ -1,4 +1,11 @@
-import { pickupStore, STAGE_ORDER, type PickupStage, type PickupRequest } from "../state/stores";
+import {
+  pickupStore,
+  STAGE_ORDER,
+  type PickupStage,
+  type PickupRequest,
+  markStudentCalled,
+  markStudentPickedUp,
+} from "../state/stores";
 import { nowHHmm } from "../format/utils";
 import { students } from "../dummy/data";
 
@@ -59,8 +66,8 @@ const LABELS: Record<PickupStage, string> = {
   processed: "Data sedang diproses sistem",
   generated: "Kalimat pemanggilan dibuat",
   queued: "Menunggu speaker tersedia",
-  announcing: "Pengumuman sedang diputar",
-  done: "Pemanggilan selesai",
+announcing: "Pengumuman sedang diputar",
+  done: "Sedang dipanggil",
 };
 
 function makeQrCode() {
@@ -82,7 +89,8 @@ export function submitPickup(input: Omit<PickupRequest, "id" | "createdAt" | "st
     secondCallExtras: [],
     callCount: 1,
   };
-  pickupStore.set({ current: req, history: pickupStore.get().history });
+pickupStore.set({ current: req, history: pickupStore.get().history });
+  markStudentCalled(req.studentIds, req.callCount);
   if (!req.qrCode) startSimulation(id);
   return req;
 }
@@ -98,6 +106,7 @@ export function completeAndStartCooldown() {
 export function finishAndArchive() {
   const s = pickupStore.get();
   if (!s.current) return;
+  markStudentPickedUp(s.current.studentIds);
   pickupStore.set({
     current: null,
     history: [{ ...s.current, stage: "done" as PickupStage }, ...s.history].slice(0, 20),
@@ -122,7 +131,8 @@ export function triggerSecondCall(extras: string[]) {
       { at: nowHHmm(), label: `Pemanggilan ulang #${nextCount}`, stage: "queued" as PickupStage },
     ],
   };
-  pickupStore.set({ current: updated });
+pickupStore.set({ current: updated });
+  markStudentCalled(req.studentIds, nextCount);
   // simulate short queued -> announcing -> cooldown
   setTimeout(() => {
     const cur = pickupStore.get().current;
