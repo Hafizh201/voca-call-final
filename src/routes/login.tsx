@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { BigButton } from "@/components/common/BigButton";
@@ -26,6 +27,8 @@ export const Route = createFileRoute("/login")({
 function LoginUsername() {
   const [username, setUsername] = useState("");
   const nav = useNavigate();
+  const [errorMessage, setErrorMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const canContinue = username.trim().length >= 3;
 
@@ -62,14 +65,28 @@ function LoginUsername() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                  setUsername(e.target.value);
+                  if (errorMessage) setErrorMessage("");
+                  }}
               placeholder="wali.user"
               autoComplete="username"
               spellCheck={false}
               className="flex-1 bg-transparent px-4 text-base text-foreground outline-none placeholder:text-muted-foreground"
             />
+            
           </div>
-        </div>
+        </div><div className="mt-2 min-h-[20px]">
+               <p
+        className={`text-xs text-red-500 transition-all duration-200 ${
+            errorMessage
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 -translate-y-1"
+        }`}
+                  >
+        {errorMessage}
+           </p>
+            </div>
 
         {/* Help */}
         <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
@@ -81,14 +98,33 @@ function LoginUsername() {
         <div className="mt-auto pb-10 pt-8">
           <BigButton
             disabled={!canContinue}
-            onClick={() => {
-              sessionStore.set({
-                username: `@${username.trim()}`,
-                signedIn: false,
-              });
+              onClick={async () => {
+                  if (loading) return;
 
-              nav({ to: "/login/pin" });
-            }}
+                  setLoading(true);
+                  setErrorMessage("");
+
+                  const usernameInput = username.trim();
+
+                  const { data, error } = await supabase
+                      .from("users")
+                      .select("*")
+                      .eq("username", usernameInput)
+                      .single();
+
+                  if (error || !data) {
+                      setLoading(false);
+                      setErrorMessage("Username tidak ditemukan.");
+                      return;
+                  }
+
+                  sessionStore.set({
+                      username: usernameInput,
+                      signedIn: false,
+                  });
+
+                  nav({ to: "/login/pin" });
+              }}
           >
             Lanjut
           </BigButton>

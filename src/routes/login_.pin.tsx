@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
@@ -21,24 +22,51 @@ function LoginPin() {
   const [shake, setShake] = useState(false);
   const session = useSession();
   const nav = useNavigate();
-
+const [loading, setLoading] = useState(false);
+const [errorMessage, setErrorMessage] = useState("");
   useEffect(() => {
     if (!session.username) nav({ to: "/login" });
   }, [session.username, nav]);
 
-  useEffect(() => {
+useEffect(() => {
     if (pin.length !== 4) return;
-    if (pin === "1234") {
-      sessionStore.set({ signedIn: true });
-      setTimeout(() => nav({ to: "/dashboard" }), 200);
-    } else {
-      setShake(true);
-      setTimeout(() => {
-        setShake(false);
-        setPin("");
-      }, 500);
+
+    async function verifyPin() {
+        setLoading(true);
+        setErrorMessage("");
+
+        const { data } = await supabase
+            .from("users")
+            .select("*")
+            .eq("username", session.username)
+            .eq("pin", pin)
+            .single();
+
+        if (data) {
+            sessionStore.set({
+                signedIn: true,
+            });
+
+            setTimeout(() => {
+                nav({ to: "/dashboard" });
+            }, 350);
+
+            return;
+        }
+
+        setLoading(false);
+
+        setShake(true);
+        setErrorMessage("PIN yang Anda masukkan salah.");
+
+        setTimeout(() => {
+            setShake(false);
+            setPin("");
+        }, 600);
     }
-  }, [pin, nav]);
+
+    verifyPin();
+}, [pin]);
 
   return (
     <PhoneShell padded={false}>
@@ -50,9 +78,22 @@ function LoginPin() {
         <div className="mt-10 mb-8">
           <PinDots length={4} filled={pin.length} shake={shake} />
         </div>
+        <div className="mt-3 h-5">
+          <p className={`text-center text-xs text-red-500 transition-all duration-200 ${
+                errorMessage
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 -translate-y-1"
+              }`}
+              >
+                {errorMessage}
+          </p>
+        </div>
 
         <PinKeypad
-          onDigit={(d) => setPin((p) => (p.length < 4 ? p + d : p))}
+          onDigit={(d) => {
+    setErrorMessage("");
+    setPin((p) => (p.length < 4 ? p + d : p));
+}}
           onBackspace={() => setPin((p) => p.slice(0, -1))}
         />
 
