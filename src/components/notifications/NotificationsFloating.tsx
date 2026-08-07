@@ -50,7 +50,7 @@ export function NotificationsFloating() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-12 z-40 w-[min(20rem,calc(100vw-2.5rem))] animate-scale-in overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
+        <div className="absolute right-0 top-12 z-[60] w-[min(20rem,calc(100vw-2.5rem))] animate-scale-in overflow-hidden rounded-3xl border border-border bg-surface shadow-card">
           <div className="flex items-center gap-2 border-b border-border/60 bg-surface-2/70 px-4 py-3">
             <div className="min-w-0 flex-1">
               <p className="font-display text-sm font-bold text-ink">Notifikasi</p>

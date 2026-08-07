@@ -64,7 +64,7 @@ export function StickyPickupBar() {
                 <span key={s.id} className="flex items-center gap-1.5">
                   {i > 0 && <span className="text-white/60">•</span>}
                   <span className="text-[11px] font-semibold">{s.nickname}</span>
-                  <span className="shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold">
+                  <span className="shrink-0 rounded-full bg-white/20 px-1.5 py-px text-[9px] font-bold pt-[4px]">
                     {s.className}
                   </span>
                 </span>
@@ -72,7 +72,7 @@ export function StickyPickupBar() {
             </p>
           )}
 
-          <p className="mt-1 text-[10px] font-medium uppercase tracking-wider text-white/70">
+          <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/70 ">
             Sudah dipanggil {callCount}&times;
           </p>
         </div>

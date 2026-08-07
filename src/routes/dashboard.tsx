@@ -54,7 +54,7 @@ function DashboardContent() {
       <div className="flex items-center justify-between px-5 pt-6">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-muted-foreground">Assalamu’alaikum, {greeting()}</p>
-          <h1 className="truncate font-display text-2xl font-bold text-ink">Wali Murid {primary?.nickname}</h1>
+          <h1 className="truncate font-display text-2xl font-bold text-ink">Wali Murid {session.username}</h1>
         </div>
         <div className="flex items-center gap-2">
           <Chip tone="success"><Wifi className="h-3 w-3" /> Terhubung</Chip>

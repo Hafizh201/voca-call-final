@@ -44,7 +44,7 @@ function Profile() {
         <div className="rounded-3xl bg-gradient-hero p-5 text-primary-foreground shadow-elevated">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Wali murid</p>
           <p className="mt-1 font-display text-xl font-bold">{session.username ?? "Wali"}</p>
-          <p className="text-xs text-white/70">SMP Nusa Bangsa</p>
+          <p className="text-xs text-white/70">SMPIT Abu Bakar Fullday School</p>
         </div>
 
         <div className="mt-6 flex items-center justify-between rounded-2xl border border-border bg-surface p-4 shadow-card">
