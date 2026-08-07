@@ -9,7 +9,15 @@ export function createStore<T>(key: string, initial: T) {
   if (typeof window !== "undefined") {
     try {
       const raw = window.localStorage.getItem(key);
-      if (raw) state = { ...initial, ...JSON.parse(raw) } as T;
+if (raw) {
+        const parsed = JSON.parse(raw) as T;
+        if (Array.isArray(initial)) {
+          // Array state harus dipertahankan sebagai array. Jika data korup (bukan array), fallback ke initial.
+          state = (Array.isArray(parsed) ? parsed : initial) as T;
+        } else {
+          state = { ...initial, ...(parsed as object) } as T;
+        }
+      }
     } catch {}
   }
 
@@ -23,7 +31,14 @@ export function createStore<T>(key: string, initial: T) {
   return {
     get: () => state,
     set: (updater: Partial<T> | ((s: T) => T)) => {
-      state = typeof updater === "function" ? (updater as (s: T) => T)(state) : { ...state, ...updater };
+      if (typeof updater === "function") {
+        state = (updater as (s: T) => T)(state);
+      } else if (Array.isArray(state)) {
+        // Array state diganti utuh (bukan di-spread jadi objek).
+        state = updater as T;
+      } else {
+        state = { ...state, ...(updater as object) } as T;
+      }
       persist();
       listeners.forEach((l) => l());
     },
@@ -99,9 +114,11 @@ export type PickupRequest = {
   announcement: string;
   cooldownStartedAt: number | null;
   secondCallExtras: string[];
-  callCount: number;
+callCount: number;
   scanCount?: number;
   lastScannedAt?: number | null;
+  /** True jika pemanggilan dihentikan paksa otomatis (batas waktu WIB tercapai). */
+  stopped?: boolean;
 };
 
 export type ActivePickupState = { current: PickupRequest | null; history: PickupRequest[] };

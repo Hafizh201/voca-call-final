@@ -15,7 +15,7 @@ export type Student = {
 export const students: Student[] = [
   {
     id: "s1",
-    name: "Muhammad Rizky Apalah",
+    name: "Muhammad aguz botakk",
     nickname: "Rizky",
     className: "VII A",
     nis: "20241023",
@@ -100,6 +100,20 @@ export const secondCallOptions = [
 
 export const dismissalTime = "14.00";
 export const schoolName = "SMPIT Abu Bakar Fullday School";
+
+/**
+ * Batas waktu maksimal pemanggilan penjemputan (waktu WIB / UTC+7).
+ * Jika pemanggilan belum selesai sampai jam ini, sistem otomatis menghentikannya.
+ * Format: "HH.mm" (24 jam). Ubah di sini untuk menyesuaikan batas waktu.
+ */
+export const MAX_PICKUP_TIME_WIB = "13.00";
+
+/** Daftar batas waktu maksimal per metode (dummy) — opsional untuk penyesuaian. */
+export const maxPickupTimePerMethod: Record<string, string> = {
+  self: MAX_PICKUP_TIME_WIB,
+  other: MAX_PICKUP_TIME_WIB,
+  ojek: MAX_PICKUP_TIME_WIB,
+};
 
 export type Friend = { id: string; name: string; className: string };
 

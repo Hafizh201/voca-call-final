@@ -9,7 +9,7 @@ export type PickupDraft = {
   waitLocation: string;
   pickerName: string;
   driverName: string;
-  platform: "Gojek" | "Grab" | "Maxim" | "InDrive";
+platform: "Gojek" | "Grab" | "Maxim" | "InDrive" | "MaxRide" | "JogjaKita";
   plate: string;
 };
 

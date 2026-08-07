@@ -113,6 +113,29 @@ export function finishAndArchive() {
   });
 }
 
+/**
+ * Menghentikan pemanggilan secara paksa (misal karena batas waktu WIB tercapai).
+ * Pemanggilan diarsipkan ke riwayat dengan penanda "stopped", dan status aktif
+ * dikosongkan sehingga halaman monitoring & popup kembali ke keadaan awal.
+ */
+export function forceStopActivePickup() {
+  const s = pickupStore.get();
+  if (!s.current) return;
+  const stopped = {
+    ...s.current,
+    stage: "done" as PickupStage,
+    stopped: true,
+    timeline: [
+      ...s.current.timeline,
+      { at: nowHHmm(), label: "Pemanggilan dihentikan (batas waktu tercapai)", stage: "done" as PickupStage },
+    ],
+  };
+  pickupStore.set({
+    current: null,
+    history: [stopped, ...s.history].slice(0, 20),
+  });
+}
+
 export function triggerSecondCall(extras: string[]) {
   const s = pickupStore.get();
   if (!s.current) return;

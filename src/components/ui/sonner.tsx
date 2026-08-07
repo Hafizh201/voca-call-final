@@ -13,8 +13,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "group-[.toast]:text-muted-foreground",
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          closeButton: "group-[.toast]:bg-surface-2 group-[.toast]:text-muted-foreground",
         },
       }}
+      closeButton
+      swipeDirections={["left", "right"]}
+      duration={Infinity}
       {...props}
     />
   );
