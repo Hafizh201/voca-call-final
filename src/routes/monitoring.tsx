@@ -29,7 +29,8 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { BigButton } from "@/components/common/BigButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { students, secondCallOptions } from "@/lib/dummy/data";
+import { secondCallOptions } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 
@@ -50,6 +51,7 @@ export const Route = createFileRoute("/monitoring")({
 function Monitoring() {
   const ready = usePageReady();
 const { current } = useActivePickup();
+const { students } = useStudents();
   const nav = useNavigate();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);

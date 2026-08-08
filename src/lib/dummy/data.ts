@@ -12,43 +12,13 @@ export type Student = {
   pendingApproval?: boolean;
 };
 
-export const students: Student[] = [
-  {
-    id: "s1",
-    name: "Muhammad aguz botakk",
-    nickname: "Rizky",
-    className: "VII A",
-    nis: "20241023",
-    avatarColor: "oklch(0.65 0.15 40)",
-    attendedAt: "06.52",
-    attendanceStatus: "hadir",
-    dismissStatus: "belum",
-  },
-  {
-    id: "s2",
-    name: "Nadhira Azalea Putri",
-    nickname: "Nadhira",
-    className: "V A",
-    nis: "20250114",
-    avatarColor: "oklch(0.68 0.14 340)",
-    attendedAt: "06.48",
-    dismissedAt: "12.05",
-    attendanceStatus: "hadir",
-    dismissStatus: "sudah",
-  },
-  {
-    id: "s3",
-    name: "Arkha Ramadhan",
-    nickname: "Arkha",
-    className: "II C",
-    nis: "20260008",
-    avatarColor: "oklch(0.68 0.15 200)",
-    attendanceStatus: "hadir",
-    attendedAt: "06.55",
-    dismissStatus: "belum",
-    pendingApproval: true,
-  },
-];
+/**
+ * Data siswa dihapus dari dummy.
+ * Data siswa kini diambil langsung dari  database online (Supabase)
+ * pada tabel `users` kolom `siswa1`, `siswa2`, `siswa3`.
+ * Lihat `src/lib/students.ts` untuk sumber data baru.
+ */
+export const students: Student[] = [];
 
 export const announcements = [
   {
@@ -106,7 +76,7 @@ export const schoolName = "SMPIT Abu Bakar Fullday School";
  * Jika pemanggilan belum selesai sampai jam ini, sistem otomatis menghentikannya.
  * Format: "HH.mm" (24 jam). Ubah di sini untuk menyesuaikan batas waktu.
  */
-export const MAX_PICKUP_TIME_WIB = "13.00";
+export const MAX_PICKUP_TIME_WIB = "19.45";
 
 /** Daftar batas waktu maksimal per metode (dummy) — opsional untuk penyesuaian. */
 export const maxPickupTimePerMethod: Record<string, string> = {

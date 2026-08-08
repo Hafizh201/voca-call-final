@@ -3,7 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { BigButton } from "@/components/common/BigButton";
-import { LogIn } from "lucide-react";
+import { Loader2, LogIn } from "lucide-react";
 import { sessionStore } from "@/lib/state/stores";
 
 export const Route = createFileRoute("/login")({
@@ -27,10 +27,8 @@ export const Route = createFileRoute("/login")({
 function LoginUsername() {
   const [username, setUsername] = useState("");
   const nav = useNavigate();
-  const [errorMessage, setErrorMessage] = useState("");
+const [errorMessage, setErrorMessage] = useState("");
   const [loading, setLoading] = useState(false);
-
-  const canContinue = username.trim().length >= 3;
 
   return (
     <PhoneShell padded={false}>
@@ -69,10 +67,11 @@ function LoginUsername() {
                   setUsername(e.target.value);
                   if (errorMessage) setErrorMessage("");
                   }}
-              placeholder="wali.user"
+placeholder="wali.user"
               autoComplete="username"
               spellCheck={false}
-              className="flex-1 bg-transparent px-4 text-base text-foreground outline-none placeholder:text-muted-foreground"
+              disabled={loading}
+              className="flex-1 bg-transparent px-4 text-base text-foreground outline-none placeholder:text-muted-foreground disabled:opacity-50"
             />
             
           </div>
@@ -96,37 +95,52 @@ function LoginUsername() {
 
         {/* Button */}
         <div className="mt-auto pb-10 pt-8">
-          <BigButton
-            disabled={!canContinue}
+<BigButton
+            disabled={loading}
               onClick={async () => {
                   if (loading) return;
+
+                  const usernameInput = username.trim();
+
+                  if (!usernameInput) {
+                      setErrorMessage("Username wajib diisi.");
+                      return;
+                  }
 
                   setLoading(true);
                   setErrorMessage("");
 
-                  const usernameInput = username.trim();
-
                   const { data, error } = await supabase
                       .from("users")
-                      .select("*")
+                      .select("username, nama_walmur")
                       .eq("username", usernameInput)
                       .single();
 
-                  if (error || !data) {
+                  if (error) {
+                      setLoading(false);
+                      setErrorMessage("Login belum dapat diproses. Silakan coba lagi.");
+                      return;
+                  }
+
+                  if (!data) {
                       setLoading(false);
                       setErrorMessage("Username tidak ditemukan.");
                       return;
                   }
 
+                  const namaWalmur = data?.nama_walmur;
+
                   sessionStore.set({
                       username: usernameInput,
+                      namaWalmur: namaWalmur ?? null,
                       signedIn: false,
                   });
 
                   nav({ to: "/login/pin" });
               }}
           >
-            Lanjut
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {loading ? "Memproses…" : "Lanjut"}
           </BigButton>
         </div>
       </div>

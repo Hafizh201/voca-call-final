@@ -23,7 +23,7 @@ import { BottomSheet } from "@/components/common/BottomSheet";
 
 import { pickupStore, useActivePickup, STAGE_ORDER, type PickupStage } from "@/lib/state/stores";
 import { nowHHmm } from "@/lib/format/utils";
-import { students } from "@/lib/dummy/data";
+import { useStudentsCache } from "@/lib/students";
 
 type GpsState = "searching" | "outside" | "approaching" | "arrived" | "unavailable";
 
@@ -75,9 +75,10 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
 
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
+  const students = useStudentsCache();
   const [autoMode, setAutoMode] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const selectableStudents = useMemo(() => students.filter((s) => !s.pendingApproval), []);
+  const selectableStudents = useMemo(() => students.filter((s) => !s.pendingApproval), [students]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [draftIds, setDraftIds] = useState<string[]>([]);
   const selectedStudents = selectableStudents.filter((s) => selectedIds.includes(s.id));

@@ -1,13 +1,14 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useActivePickup, useStudentStatus, STAGE_LABELS } from "@/lib/state/stores";
-import { students } from "@/lib/dummy/data";
+import { useStudentsCache } from "@/lib/students";
 import { Radio, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function StickyPickupBar() {
   const { current } = useActivePickup();
   const studentStatus = useStudentStatus();
+  const students = useStudentsCache();
   const [, setTick] = useState(0);
   const [scrolled, setScrolled] = useState(false);
 

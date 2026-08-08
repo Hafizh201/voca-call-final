@@ -1,17 +1,17 @@
-# TODO — Perbaikan UX Notifikasi
+# TODO — Sinkronisasi data siswa (filter + guard + empty state)
 
-## Tujuan
-Membuat notifikasi lebih interaktif & berwarna (bukan putih polos), bisa di-close/dismiss, bisa di-swipe untuk hide, dan konsisten hilang di floating maupun halaman notifikasi. Menyediakan filter untuk menyembunyikan notif yang sudah dibaca.
+## Goals
+- Jumlah siswa di UI otomatis mengikuti jumlah data siswa valid di `students`
+- Tidak menampilkan slot kosong/placeholder/nama null
+- Tidak crash saat `students` kosong
+- Tidak mengubah Supabase/.env/auth/RLS/schema
+- Tidak mengubah UI/UX existing
 
-## Langkah
-- [x] 1. Perbarui store: tambah `dismissed` field + aksi `dismissNotification`, `toggleNotificationRead`, `restoreNotifications`.
-- [x] 2. Buat komponen `SwipeableNotificationItem` (swipe-to-dismiss + tombol close).
-- [x] 3. Perbarui `NotificationsFloating.tsx`: desain berwarna/interaktif, swipe + tombol close, filter cepat.
-- [x] 4. Perbarui `routes/notifications.tsx`: pakai swipe item, segmented filter (Semua/Belum/Sudah), desain berwarna.
-- [x] 5. Tambah animasi/utility di `styles.css` bila perlu.
-- [x] 6. Verifikasi build & lint.
-- [x] 7. Update Sonner toast di CallDeadlineWatcher & seluruh komponen:
-  - Tambah `duration: Infinity` agar notif toast tidak auto-hilang.
-  - Swipe-to-dismiss bawaan Sonner langsung berfungsi.
-- [x] 8. Update konfigurasi Toaster di `__root.tsx` untuk mendukung swipe
-  - `closeButton`, `duration: Infinity` untuk notif penting.
+## Steps
+- [x] `children.tsx`: filter siswa valid + empty state
+- [x] `attendance-today.tsx`: filter siswa valid + empty state
+- [x] `dashboard.tsx`: guard hero card saat daftar kosong
+- [x] `pickup.select.tsx`: guard `active[0]` + empty state
+- [x] `pickup.form.$method.tsx`: guard `[0].id` saat daftar kosong
+- [x] `StudentHeroCard.tsx`: bersihkan artefak komentar "SISWA 2/3"
+- [x] Build `vite build` sukses tanpa error TS/TSX

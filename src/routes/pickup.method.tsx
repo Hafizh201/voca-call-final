@@ -5,8 +5,11 @@ import { useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
-import { students } from "@/lib/dummy/data";
-import { UserRound, UsersRound, Bike, ChevronRight } from "lucide-react";
+import { EmptyState } from "@/components/feedback/EmptyState";
+import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
+import { isPastMaxPickupTime } from "@/lib/pickup/callDeadline";
+import { UserRound, UsersRound, Bike, ChevronRight, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pickup/method")({
@@ -26,10 +29,31 @@ type Method = "self" | "other" | "ojek";
 function MethodPage() {
   const ready = usePageReady();
   const [method, setMethod] = useState<Method | null>(null);
-  const nav = useNavigate();
-  const active = students.filter((s) => !s.pendingApproval);
+const nav = useNavigate();
+const { students } = useStudents();
+const active = students.filter((s) => !s.pendingApproval);
   const needsSelect = active.length > 1;
+  const closed = isPastMaxPickupTime();
   if (!ready) return <PageSkeleton withNav={false} />;
+
+  // Jika waktu pemanggilan sudah ditutup (melewati batas WIB), blokir alur penjemputan.
+  if (closed) {
+    return (
+      <PhoneShell>
+        <TopBar title="Mulai Jemput" back="/dashboard" subtitle="Pemanggilan ditutup" />
+        <div className="p-5">
+          <EmptyState
+            icon={<Clock className="h-7 w-7" />}
+            title="Pemanggilan sudah ditutup"
+            body={`Layanan pemanggilan penjemputan telah berakhir pada pukul ${MAX_PICKUP_TIME_WIB} WIB. Anda tidak dapat memulai penjemputan saat ini.`}
+            action={
+              <BigButton onClick={() => nav({ to: "/dashboard" })}>Kembali ke Beranda</BigButton>
+            }
+          />
+        </div>
+      </PhoneShell>
+    );
+  }
 
   const items: { key: Method; icon: React.ReactNode; title: string; body: string }[] = [
     { key: "self", icon: <UserRound className="h-6 w-6" />, title: "Dijemput sendiri", body: "Orang tua yang datang menjemput." },

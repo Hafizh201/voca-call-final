@@ -8,11 +8,13 @@ import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { SmartNoteAssistant } from "@/components/pickup/SmartNoteAssistant";
 import { PlateInput, TextField, SelectField, DropdownField } from "@/components/pickup/Fields";
-import { students, friends, dismissalFor, type Student, type Friend } from "@/lib/dummy/data";
+import { friends, dismissalFor, type Student, type Friend } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
 import { isValidPlate } from "@/lib/format/utils";
-import { Users, Clock, Megaphone, QrCode } from "lucide-react";
+import { Users, Clock, Megaphone, QrCode, AlertTriangle } from "lucide-react";
 import { QrGuideDialog } from "@/components/pickup/QrGuideDialog";
 import { getDraft, setDraft, type PickupDraft } from "@/lib/pickup/draft";
+import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({ s: z.string().optional(), f: z.string().optional() });
 
@@ -44,10 +46,12 @@ function FormPage() {
 
   if (!ready) return <FormSkeleton />;
 
-  const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
+const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
     setState((p) => ({ ...p, [k]: v }));
 
-  const studentIds = (s ?? students.filter((x) => !x.pendingApproval)[0].id).split(",");
+const { students } = useStudents();
+const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApproval);
+  const studentIds = (s ?? firstActive?.id ?? "").split(",").filter(Boolean);
   const friendIds: string[] = method === "ojek" || !f ? [] : f.split(",").filter(Boolean);
   const friendList: Friend[] = friendIds
     .map((id) => friends.find((x) => x.id === id))
@@ -80,14 +84,15 @@ function FormPage() {
       : method === "other"
         ? `dijemput oleh ${state.pickerName || "penjemput"}`
         : `dijemput driver ${state.platform} ${state.driverName || ""} ${state.plate}`.trim()
-  }. Mohon segera menuju area penjemputan.${noteTail ? ` ${noteTail}` : ""}`;
-
+}. Mohon segera menuju area penjemputan.${noteTail ? ` ${noteTail}` : ""}`;
 
   const plateOk = method !== "ojek" || isValidPlate(state.plate);
   const requiredOk =
+    Boolean(state.estimate) &&
     (method !== "other" || state.pickerName.trim().length > 1) &&
     (method !== "ojek" || (state.driverName.trim() && plateOk));
   const canNext = noteValid && requiredOk;
+  const estimateMissing = !state.estimate;
 
   return (
     <PhoneShell>
@@ -116,7 +121,8 @@ function FormPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-display text-sm font-bold text-ink">{p.name}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Kelas {p.className} · {p.isFriend ? "Teman" : "Ananda"}
+                    {p.className ? `Kelas ${p.className} · ` : ""}
+                    {p.isFriend ? "Teman" : "Ananda"}
                   </p>
                 </div>
                 <span className="flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-bold text-ink">
@@ -185,29 +191,42 @@ function FormPage() {
         )}
 
 
-        <SelectField
-          label={method === "self" ? "Pemanggilan" : "Pemanggilan"}
-          value={state.estimate as string}
-          onChange={(v) => {
-            if (v === "qr") {
-              setQrAsk(true);
-              return;
+<div className={cn("space-y-1 rounded-2xl border border-transparent p-1 transition", estimateMissing && "border-destructive/40 bg-destructive/5")}>
+          <label className="inline-flex items-center gap-1 px-1 text-xs font-semibold text-muted-foreground">
+            Metode Pemanggilan
+            <span className="text-destructive" aria-hidden>
+              *
+            </span>
+          </label>
+          <SelectField
+            label="Pilih Metode Pemanggilan"
+            value={state.estimate as string}
+            onChange={(v) => {
+              if (v === "qr") {
+                setQrAsk(true);
+                return;
+              }
+              set("estimate", v);
+            }}
+            options={
+              method === "self"
+                ? [
+                    { value: "sudah", label: "Sudah Sampai" },
+                    { value: "qr", label: "Sistem QR" },
+                    { value: "5", label: "Dalam ≤ 5 menit" },
+                  ]
+                : [
+                    { value: "sudah", label: "Sudah Sampai" },
+                    { value: "qr", label: "Sistem QR" },
+                  ]
             }
-            set("estimate", v);
-          }}
-          options={
-            method === "self"
-              ? [
-                  { value: "sudah", label: "Sudah Sampai" },
-                  { value: "qr", label: "Sistem QR" },
-                  { value: "5", label: "Dalam ≤ 5 menit" },
-                ]
-              : [
-                  { value: "sudah", label: "Sudah Sampai" },
-                  { value: "qr", label: "Sistem QR" },
-                ]
-          }
-        />
+          />
+          {estimateMissing && (
+            <p className="flex items-center gap-1 px-1 text-[11px] font-medium text-destructive">
+              <AlertTriangle className="h-3 w-3" /> Pilih salah satu metode pemanggilan untuk melanjutkan.
+            </p>
+          )}
+        </div>
         {state.estimate === "qr" && (
           <div className="flex items-start gap-2 rounded-2xl border border-primary/25 bg-primary/5 px-3 py-2.5 text-[11px] leading-relaxed text-ink">
             <QrCode className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

@@ -30,12 +30,13 @@ const [errorMessage, setErrorMessage] = useState("");
 
 useEffect(() => {
     if (pin.length !== 4) return;
+    if (loading) return;
 
     async function verifyPin() {
         setLoading(true);
         setErrorMessage("");
 
-        const { data } = await supabase
+        const { data, error } = await supabase
             .from("users")
             .select("*")
             .eq("username", session.username)
@@ -56,8 +57,18 @@ useEffect(() => {
 
         setLoading(false);
 
+        if (error) {
+            setErrorMessage("Login belum dapat diproses. Silakan coba lagi.");
+            setShake(true);
+            setTimeout(() => {
+                setShake(false);
+                setPin("");
+            }, 600);
+            return;
+        }
+
         setShake(true);
-        setErrorMessage("PIN yang Anda masukkan salah.");
+        setErrorMessage("PIN yang Anda masukkan tidak sesuai.");
 
         setTimeout(() => {
             setShake(false);
@@ -71,9 +82,9 @@ useEffect(() => {
   return (
     <PhoneShell padded={false}>
       <div className="flex min-h-screen flex-col px-6 pt-14">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Halo, {session.username}</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Halo, {session.namaWalmur || session.username}</p>
         <h1 className="mt-2 font-display text-2xl font-bold text-ink">Masukkan PIN Anda</h1>
-        <p className="mt-1 text-xs text-muted-foreground">Gunakan 4 digit PIN. Untuk demo, PIN adalah 1234.</p>
+<p className="mt-1 text-xs text-muted-foreground">Gunakan 4 digit PIN Anda.</p>
 
         <div className="mt-10 mb-8">
           <PinDots length={4} filled={pin.length} shake={shake} />
@@ -89,7 +100,8 @@ useEffect(() => {
           </p>
         </div>
 
-        <PinKeypad
+<PinKeypad
+          disabled={loading}
           onDigit={(d) => {
     setErrorMessage("");
     setPin((p) => (p.length < 4 ? p + d : p));

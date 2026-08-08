@@ -7,11 +7,13 @@ import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { BigTeman } from "@/components/common/teman";
-import { students, type Friend, dismissalFor } from "@/lib/dummy/data";
+import { type Friend, dismissalFor } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
 import { FriendPicker } from "@/components/pickup/FriendPicker";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { EmptyState } from "@/components/feedback/EmptyState";
 
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, UsersRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const searchSchema = z.object({ m: z.enum(["self", "other", "ojek"]).default("self") });
@@ -32,8 +34,9 @@ export const Route = createFileRoute("/pickup/select")({
 function SelectStudent() {
   const ready = usePageReady();
   const { m } = Route.useSearch();
-  const active = students.filter((s) => !s.pendingApproval);
-  const [selected, setSelected] = useState<string[]>([active[0].id]);
+const { students } = useStudents();
+const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
+  const [selected, setSelected] = useState<string[]>(active[0] ? [active[0].id] : []);
   const [friendOpen, setFriendOpen] = useState(false);
   const [friendList, setFriendList] = useState<Friend[]>([]);
   const [closeAsk, setCloseAsk] = useState(false);
@@ -70,7 +73,14 @@ function SelectStudent() {
     <PhoneShell>
       <TopBar title="Pilih Siswa" back="/pickup/method" subtitle="Bisa lebih dari satu" />
       <div className="space-y-3 p-5">
-        {active.map((s) => {
+        {active.length === 0 ? (
+          <EmptyState
+            icon={<UsersRound className="h-6 w-6" />}
+            title="Belum ada data siswa"
+            body="Tidak ada siswa yang dapat dipilih untuk dijemput."
+          />
+        ) : (
+        active.map((s) => {
           const checked = selected.includes(s.id);
           return (
             <button
@@ -89,17 +99,24 @@ function SelectStudent() {
               </span>
               <div className="min-w-0 flex-1">
                 <p className="font-display text-base font-bold text-ink">{s.name}</p>
-                <p className="text-xs text-muted-foreground">Kelas {s.className} · NIS {s.nis}</p>
+                {s.className || s.nis ? (
+                  <p className="text-xs text-muted-foreground">
+                    {s.className ? `Kelas ${s.className}` : ""}
+                    {s.className && s.nis ? " · " : ""}
+                    {s.nis ? `NIS ${s.nis}` : ""}
+                  </p>
+                ) : null}
                 <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold text-ink">
                   <Clock className="h-3 w-3 text-primary" /> Jam Kepulangan : {dismissalFor(s.className)}
                 </span>
               </div>
-              <span className={cn("grid h-6 w-6 place-items-center rounded-md border-2", checked ? "border-primary bg-primary text-white" : "border-border")}>
+<span className={cn("grid h-6 w-6 place-items-center rounded-md border-2", checked ? "border-primary bg-primary text-white" : "border-border")}>
                 {checked && <Check className="h-4 w-4" />}
               </span>
             </button>
           );
-        })}
+        })
+        )}
         {allowFriends && (
           <>
             <FriendPicker

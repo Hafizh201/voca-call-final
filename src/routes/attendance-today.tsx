@@ -4,11 +4,12 @@ import { PageSkeleton } from "@/components/feedback/Skeletons";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { students } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
 import { IconBadge, Chip } from "@/components/common/Section";
-import { ClipboardCheck, ClipboardList } from "lucide-react";
+import { ClipboardCheck, ClipboardList, Users } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/feedback/EmptyState";
 
 export const Route = createFileRoute("/attendance-today")({
   head: () => ({
@@ -26,13 +27,16 @@ function Attendance() {
   const ready = usePageReady();
   const [pick, setPick] = useState<string>("all");
   if (!ready) return <PageSkeleton />;
-  const list = pick === "all" ? students : students.filter((s) => s.id === pick);
+  // Data siswa dari database online (Supabase), hanya yang valid.
+  const { students } = useStudents();
+  const visible = (students ?? []).filter((s) => s && s.name?.trim());
+  const list = pick === "all" ? visible : visible.filter((s) => s.id === pick);
   return (
     <PhoneShell>
       <TopBar title="Presensi Hari Ini" back="/dashboard" subtitle="Diperbarui otomatis" />
       <div className="space-y-3 p-5">
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
-          {[{ id: "all", nickname: "Semua" }, ...students].map((o) => (
+          {[{ id: "all", nickname: "Semua" }, ...visible].map((o) => (
             <button
               key={o.id}
               type="button"
@@ -48,35 +52,43 @@ function Attendance() {
             </button>
           ))}
         </div>
-        {list.map((s) => {
-          const tone = s.dismissStatus === "sudah" ? "success" : s.attendanceStatus === "hadir" ? "warm" : "muted";
-          return (
-            <div key={s.id} className="rounded-3xl border border-border bg-surface p-4 shadow-card">
-              <div className="flex items-center gap-3">
-                <span
-                  className="grid h-12 w-12 place-items-center rounded-2xl font-display text-lg font-bold text-white"
-                  style={{ backgroundColor: s.avatarColor }}
-                >
-                  {s.nickname[0]}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-display text-sm font-bold text-ink">{s.name}</p>
-                  <p className="text-xs text-muted-foreground">Kelas {s.className}</p>
+        {visible.length === 0 ? (
+          <EmptyState
+            icon={<Users className="h-6 w-6" />}
+            title="Belum ada data siswa"
+            body="Data anak yang terdaftar belum tersedia."
+          />
+        ) : (
+          list.map((s) => {
+            const tone = s.dismissStatus === "sudah" ? "success" : s.attendanceStatus === "hadir" ? "warm" : "muted";
+            return (
+              <div key={s.id} className="rounded-3xl border border-border bg-surface p-4 shadow-card">
+                <div className="flex items-center gap-3">
+                  <span
+                    className="grid h-12 w-12 place-items-center rounded-2xl font-display text-lg font-bold text-white"
+                    style={{ backgroundColor: s.avatarColor }}
+                  >
+                    {s.nickname ? s.nickname[0] : s.name[0]}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-display text-sm font-bold text-ink">{s.name}</p>
+                    {s.className ? <p className="text-xs text-muted-foreground">Kelas {s.className}</p> : null}
+                  </div>
+                  {s.pendingApproval && <Chip tone="warning">Pending Approval</Chip>}
                 </div>
-                {s.pendingApproval && <Chip tone="warning">Pending Approval</Chip>}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <StatusRow icon={<ClipboardCheck className="h-4 w-4" />} label="Hadir" value={s.attendedAt ?? "—"} tone="success" />
+                  <StatusRow
+                    icon={<ClipboardList className="h-4 w-4" />}
+                    label="Pulang"
+                    value={s.dismissedAt ?? "Belum"}
+                    tone={tone === "success" ? "success" : "muted"}
+                  />
+                </div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <StatusRow icon={<ClipboardCheck className="h-4 w-4" />} label="Hadir" value={s.attendedAt ?? "—"} tone="success" />
-                <StatusRow
-                  icon={<ClipboardList className="h-4 w-4" />}
-                  label="Pulang"
-                  value={s.dismissedAt ?? "Belum"}
-                  tone={tone === "success" ? "success" : "muted"}
-                />
-              </div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
       <BottomNav />
     </PhoneShell>

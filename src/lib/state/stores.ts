@@ -54,8 +54,8 @@ function serverSnapshot<T>(initial: T) {
 }
 
 // ============ SESSION ============
-export type SessionState = { username: string | null; signedIn: boolean };
-const sessionInitial: SessionState = { username: null, signedIn: false };
+export type SessionState = { username: string | null; namaWalmur: string | null; signedIn: boolean };
+const sessionInitial: SessionState = { username: null, namaWalmur: null, signedIn: false };
 export const sessionStore = createStore<SessionState>("panggil.session", sessionInitial);
 export const useSession = () =>
   useSyncExternalStore(sessionStore.subscribe, sessionStore.get, serverSnapshot(sessionInitial));

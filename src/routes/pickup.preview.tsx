@@ -7,7 +7,7 @@ import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { getDraft, resetDraft } from "@/lib/pickup/draft";
-import { students } from "@/lib/dummy/data";
+import { useStudents } from "@/lib/students";
 import { submitPickup } from "@/lib/pickup/simulator";
 import { formatPlate } from "@/lib/format/utils";
 import { Check } from "lucide-react";
@@ -34,6 +34,7 @@ function PreviewPage() {
   const [checks, setChecks] = useState({ data: false, kontak: false });
   const nav = useNavigate();
   const draft = getDraft();
+  const { students } = useStudents();
   const studentIds = s.split(",");
   const chosen = studentIds.map((id: string) => students.find((x) => x.id === id)!).filter(Boolean);
   const allChecked = checks.data && checks.kontak;

@@ -7,12 +7,13 @@ import {
   markStudentPickedUp,
 } from "../state/stores";
 import { nowHHmm } from "../format/utils";
-import { students } from "../dummy/data";
+import { getStudents } from "../students";
 
 export function buildAnnouncement(
   req: Pick<PickupRequest, "studentIds" | "method" | "pickerName"> &
     Partial<Pick<PickupRequest, "note" | "noteExtras">>,
 ) {
+  const students = getStudents();
   const names = req.studentIds
     .map((id) => students.find((s) => s.id === id)?.name)
     .filter(Boolean)
