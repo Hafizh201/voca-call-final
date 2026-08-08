@@ -4,12 +4,12 @@ import { PageSkeleton } from "@/components/feedback/Skeletons";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
-import { recentPickups } from "@/lib/dummy/data";
 import { IconBadge, Chip } from "@/components/common/Section";
 import { EmptyState } from "@/components/feedback/EmptyState";
-import { History as HistoryIcon, Search, X } from "lucide-react";
-import { useState } from "react";
+import { History as HistoryIcon, Search, X, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { fetchPickupHistory, type PickupHistoryItem } from "@/lib/pickup/history";
 import {
   Sheet,
   SheetContent,
@@ -29,27 +29,69 @@ export const Route = createFileRoute("/history")({
   component: HistoryPage,
 });
 
-type Item = (typeof recentPickups)[number];
-
 const FILTERS = ["Semua", "Hari ini", "Minggu ini", "Bulan ini"] as const;
 type Filter = (typeof FILTERS)[number];
 
-function matchesFilter(item: Item, filter: Filter) {
+function matchesFilter(item: PickupHistoryItem, filter: Filter) {
   if (filter === "Semua") return true;
-  if (filter === "Hari ini") return item.date === "Hari ini";
-  if (filter === "Minggu ini") return ["Hari ini", "Kemarin", "2 hari lalu", "Senin"].includes(item.date);
+  const now = new Date();
+  const d = parseDate(item.date);
+  if (!d) return true;
+  if (filter === "Hari ini") {
+    return d.toDateString() === now.toDateString();
+  }
+  if (filter === "Minggu ini") {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay());
+    return d >= start;
+  }
+  if (filter === "Bulan ini") {
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }
   return true;
+}
+
+/** Coba parse tanggal dalam format id-ID (mis. "Senin, 6 Januari 2025"). */
+function parseDate(dateStr: string): Date | null {
+  if (!dateStr || dateStr === "-") return null;
+  const parts = dateStr.split(",");
+  if (parts.length < 2) return null;
+  const map: Record<string, number> = {
+    Januari: 0, Februari: 1, Maret: 2, April: 3, Mei: 4, Juni: 5,
+    Juli: 6, Agustus: 7, September: 8, Oktober: 9, November: 10, Desember: 11,
+  };
+  const m = parts[1].trim().match(/(\d+)\s+([A-Za-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = map[m[2]];
+  const year = Number(m[3]);
+  if (month === undefined || isNaN(day) || isNaN(year)) return null;
+  return new Date(year, month, day);
 }
 
 function HistoryPage() {
   const ready = usePageReady();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("Semua");
-  const [detail, setDetail] = useState<Item | null>(null);
+  const [detail, setDetail] = useState<PickupHistoryItem | null>(null);
+  const [items, setItems] = useState<PickupHistoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  async function load() {
+    setLoading(true);
+    const data = await fetchPickupHistory();
+    setItems(data);
+    setLoading(false);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
   if (!ready) return <PageSkeleton />;
 
   const term = q.trim().toLowerCase();
-  const list = recentPickups.filter(
+  const list = items.filter(
     (p) =>
       matchesFilter(p, filter) &&
       (term === "" ||
@@ -60,7 +102,21 @@ function HistoryPage() {
 
   return (
     <PhoneShell>
-      <TopBar title="Riwayat Penjemputan" back="/dashboard" subtitle={`${list.length} data ditampilkan`} />
+      <TopBar
+        title="Riwayat Penjemputan"
+        back="/dashboard"
+        subtitle={loading ? "Memuat data…" : `${list.length} data ditampilkan`}
+        right={
+          <button
+            type="button"
+            onClick={load}
+            aria-label="Muat ulang"
+            className="grid h-9 w-9 place-items-center rounded-xl bg-surface-2 text-muted-foreground active:scale-95"
+          >
+            <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
+          </button>
+        }
+      />
       <div className="p-5">
         <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-2 shadow-card">
           <Search className="h-4 w-4 text-muted-foreground" />
@@ -94,7 +150,13 @@ function HistoryPage() {
           ))}
         </div>
         <div className="mt-4 space-y-2">
-          {list.length === 0 ? (
+          {loading ? (
+            <EmptyState
+              icon={<RefreshCw className="h-6 w-6 animate-spin" />}
+              title="Memuat riwayat"
+              body="Mengambil data dari sistem…"
+            />
+          ) : list.length === 0 ? (
             <EmptyState
               icon={<HistoryIcon className="h-6 w-6" />}
               title="Tidak ada riwayat"
@@ -119,7 +181,7 @@ function HistoryPage() {
                     {p.date} · {p.time}
                   </p>
                 </div>
-                <Chip tone="success">{p.status}</Chip>
+                <Chip tone={p.status === "Selesai" ? "success" : "warning"}>{p.status}</Chip>
               </button>
             ))
           )}

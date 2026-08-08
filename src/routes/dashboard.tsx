@@ -21,6 +21,7 @@ import { pickupBlockReason } from "@/lib/pickup/callDeadline";
 import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
 import { AutoPickupGeofence } from "@/components/monitoring/AutoPickupGeofence";
 import { NotificationsFloating } from "@/components/notifications/NotificationsFloating";
+import { CctvPanel } from "@/components/common/CctvPanel";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -141,7 +142,8 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
         <BigButton onClick={() => nav({ to: "/pickup/method" })}>Mulai Penjemputan</BigButton>
       </div> */}
 
-      <BottomNav />
+<BottomNav />
+      <CctvPanel />
 
       <ConfirmDialog
         open={closedAsk}
