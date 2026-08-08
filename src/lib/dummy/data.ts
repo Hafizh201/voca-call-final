@@ -73,10 +73,28 @@ export const schoolName = "SMPIT Abu Bakar Fullday School";
 
 /**
  * Batas waktu maksimal pemanggilan penjemputan (waktu WIB / UTC+7).
+ * Berlaku HANYA pada hari sekolah (Senin–Jumat).
  * Jika pemanggilan belum selesai sampai jam ini, sistem otomatis menghentikannya.
  * Format: "HH.mm" (24 jam). Ubah di sini untuk menyesuaikan batas waktu.
  */
-export const MAX_PICKUP_TIME_WIB = "19.45";
+export const MAX_PICKUP_TIME_WIB = "22.00";
+
+/**
+ * SAKELAR UTAMA pemanggilan penjemputan (master on/off).
+ * - `true`  → pemanggilan aktif (mengikuti aturan hari sekolah/jam tutup & weekend 24 jam).
+ * - `false` → pemanggilan NONAKTIF total. Walaupun belum jam tutup / weekend, tetap TIDAK bisa memanggil.
+ * Ini adalah kunci utama dari segalanya.
+ */
+export const PICKUP_ENABLED = true;
+
+/**
+ * FORCE ON pemanggilan (pengunci khusus admin).
+ * - `true`  → walaupun sudah melewati jam tutup (MAX_PICKUP_TIME_WIB) di HARI SEKOLAH,
+ *             pemanggilan TETAP bisa berjalan.
+ * - `false` → normal; setelah lewat jam tutup di hari sekolah, pemanggilan berhenti.
+ * HANYA berlaku untuk hari sekolah (Senin–Jumat). Tidak berlaku di akhir pekan.
+ */
+export const PICKUP_FORCE_ON = true;
 
 /** Daftar batas waktu maksimal per metode (dummy) — opsional untuk penyesuaian. */
 export const maxPickupTimePerMethod: Record<string, string> = {

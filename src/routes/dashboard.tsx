@@ -11,12 +11,13 @@ import { AnnouncementList, TipsCard, RecentPickupsCard, SystemStatusCard } from 
 import { SectionHeader, Chip } from "@/components/common/Section";
 import { BigButton } from "@/components/common/BigButton";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
-import { dismissalTime, contacts } from "@/lib/dummy/data";
+import { contacts } from "@/lib/dummy/data";
 import { useSession, useActivePickup } from "@/lib/state/stores";
 import { useStudents } from "@/lib/students";
 import { greeting } from "@/lib/format/utils";
-import { PhoneCall, History, ClipboardList, Wifi, Bell, LifeBuoy, Clock, Phone } from "lucide-react";
-import { isPastMaxPickupTime } from "@/lib/pickup/callDeadline";
+import { PhoneCall, History, ClipboardList, Wifi, WifiOff, Bell, LifeBuoy, Clock, Phone } from "lucide-react";
+import { useConnection } from "@/hooks/use-connection";
+import { pickupBlockReason } from "@/lib/pickup/callDeadline";
 import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
 import { AutoPickupGeofence } from "@/components/monitoring/AutoPickupGeofence";
 import { NotificationsFloating } from "@/components/notifications/NotificationsFloating";
@@ -48,9 +49,12 @@ function DashboardContent() {
 const { current } = useActivePickup();
 const { students } = useStudents();
 const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
-  const pickupClosed = isPastMaxPickupTime();
+  const pickupBlock = pickupBlockReason();
+  const pickupClosed = pickupBlock !== null;
   const [closedAsk, setClosedAsk] = useState(false);
   const csContact = contacts.find((c) => c.role === "Admin Penjemputan") ?? contacts[0];
+  const online = useConnection();
+  const todayDismissal = active[0]?.dismissalTime;
 
   useEffect(() => {
     if (!session.signedIn) nav({ to: "/login" });
@@ -61,10 +65,14 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
       <div className="flex items-center justify-between px-5 pt-6">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-muted-foreground">Assalamu’alaikum, {greeting()}</p>
-<h1 className="truncate font-display text-2xl font-bold text-ink">{session.namaWalmur ?? session.username}</h1>
+<h1 className="truncate font-display text-2xl font-bold text-ink">{session.statusUser ? `${session.statusUser} ${session.namaWalmur ?? session.username}` : (session.namaWalmur ?? session.username)}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          <Chip tone="success"><Wifi className="h-3 w-3" /> Terhubung</Chip>
+<div className="flex items-center gap-2">
+          {online ? (
+            <Chip tone="success"><Wifi className="h-3 w-3" /> Terhubung</Chip>
+          ) : (
+            <Chip tone="danger"><WifiOff className="h-3 w-3" /> Terputus</Chip>
+          )}
           <NotificationsFloating />
         </div>
 
@@ -84,7 +92,17 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
           to="/pickup/method"
           icon={pickupClosed ? <Clock className="h-5 w-5" /> : <PhoneCall className="h-5 w-5" />}
           title="Mulai Jemput"
-          body={pickupClosed ? `Ditutup ${MAX_PICKUP_TIME_WIB} WIB` : current ? "Lanjutkan proses" : `Pulang ${dismissalTime}`}
+          body={
+            pickupBlock === "off"
+              ? "Pemanggilan nonaktif"
+              : pickupBlock === "past-time"
+                ? `Ditutup ${MAX_PICKUP_TIME_WIB} WIB`
+                : current
+                  ? "Lanjutkan proses"
+                  : todayDismissal
+                    ? `Pulang ${todayDismissal}`
+                    : "Siap menjemput"
+          }
           highlight
           onClick={() => {
             if (pickupClosed) {
@@ -127,8 +145,12 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
 
       <ConfirmDialog
         open={closedAsk}
-        title="Pemanggilan sudah ditutup"
-        description={`Layanan pemanggilan penjemputan telah berakhir pada pukul ${MAX_PICKUP_TIME_WIB} WIB. Anda tidak dapat memulai penjemputan saat ini. Silakan hubungi Admin Penjemputan jika memerlukan bantuan.`}
+        title={pickupBlock === "off" ? "Pemanggilan sedang nonaktif" : "Pemanggilan sudah ditutup"}
+        description={
+          pickupBlock === "off"
+            ? "Layanan pemanggilan penjemputan sedang dinonaktifkan oleh pihak sekolah untuk sementara waktu. Anda tidak dapat memulai penjemputan saat ini. Silakan hubungi Admin Penjemputan jika memerlukan bantuan."
+            : `Layanan pemanggilan penjemputan telah berakhir pada pukul ${MAX_PICKUP_TIME_WIB} WIB. Anda tidak dapat memulai penjemputan saat ini. Silakan hubungi Admin Penjemputan jika memerlukan bantuan.`
+        }
         cancelLabel="Kembali"
         confirmLabel="Hubungi CS"
         onCancel={() => setClosedAsk(false)}

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Check, Search, UserPlus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { friendClasses, friends, type Friend } from "@/lib/dummy/data";
+import type { Student } from "@/lib/students";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 export function FriendPicker({
@@ -9,21 +9,29 @@ export function FriendPicker({
   selected,
   onAdd,
   onRemove,
+  students = [],
 }: {
   open: boolean;
-  selected: Friend[];
-  onAdd: (f: Friend) => void;
+  selected: Student[];
+  onAdd: (f: Student) => void;
   onRemove: (id: string) => void;
+  students?: Student[];
 }) {
   const [cls, setCls] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [pending, setPending] = useState<Friend | null>(null);
+  const [pending, setPending] = useState<Student | null>(null);
+
+  // Kelas diambil langsung dari data siswa (database), bukan hardcoded dummy.
+  const friendClasses = useMemo(
+    () => Array.from(new Set(students.map((s) => s.className).filter(Boolean))),
+    [students],
+  );
 
   const query = q.trim().toLowerCase();
   const results = useMemo(() => {
     if (!cls || query.length === 0) return [];
-    return friends.filter((f) => f.className === cls && f.name.toLowerCase().includes(query));
-  }, [cls, query]);
+    return students.filter((f) => f.className === cls && f.name.toLowerCase().includes(query));
+  }, [cls, query, students]);
 
 
   return (

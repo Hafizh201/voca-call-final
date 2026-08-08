@@ -26,9 +26,10 @@ export const Route = createFileRoute("/attendance-today")({
 function Attendance() {
   const ready = usePageReady();
   const [pick, setPick] = useState<string>("all");
+  // Hook dipanggil sebelum early return agar urutan hook konsisten (Rules of Hooks).
+  const { students } = useStudents();
   if (!ready) return <PageSkeleton />;
   // Data siswa dari database online (Supabase), hanya yang valid.
-  const { students } = useStudents();
   const visible = (students ?? []).filter((s) => s && s.name?.trim());
   const list = pick === "all" ? visible : visible.filter((s) => s.id === pick);
   return (

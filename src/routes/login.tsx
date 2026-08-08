@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
@@ -110,9 +110,9 @@ placeholder="wali.user"
                   setLoading(true);
                   setErrorMessage("");
 
-                  const { data, error } = await supabase
+const { data, error } = await supabase
                       .from("users")
-                      .select("username, nama_walmur")
+                      .select("username, nama_walmur, status_user")
                       .eq("username", usernameInput)
                       .single();
 
@@ -128,11 +128,13 @@ placeholder="wali.user"
                       return;
                   }
 
-                  const namaWalmur = data?.nama_walmur;
+const namaWalmur = data?.nama_walmur;
+                  const statusUser = data?.status_user;
 
                   sessionStore.set({
                       username: usernameInput,
                       namaWalmur: namaWalmur ?? null,
+                      statusUser: statusUser ?? null,
                       signedIn: false,
                   });
 

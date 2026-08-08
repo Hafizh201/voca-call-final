@@ -7,8 +7,7 @@ import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { BigTeman } from "@/components/common/teman";
-import { type Friend, dismissalFor } from "@/lib/dummy/data";
-import { useStudents } from "@/lib/students";
+import { useStudents, type Student } from "@/lib/students";
 import { FriendPicker } from "@/components/pickup/FriendPicker";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { EmptyState } from "@/components/feedback/EmptyState";
@@ -37,8 +36,8 @@ function SelectStudent() {
 const { students } = useStudents();
 const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
   const [selected, setSelected] = useState<string[]>(active[0] ? [active[0].id] : []);
-  const [friendOpen, setFriendOpen] = useState(false);
-  const [friendList, setFriendList] = useState<Friend[]>([]);
+const [friendOpen, setFriendOpen] = useState(false);
+  const [friendList, setFriendList] = useState<Student[]>([]);
   const [closeAsk, setCloseAsk] = useState(false);
   const [submitAsk, setSubmitAsk] = useState(false);
   const nav = useNavigate();
@@ -107,7 +106,7 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
                   </p>
                 ) : null}
                 <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[10px] font-bold text-ink">
-                  <Clock className="h-3 w-3 text-primary" /> Jam Kepulangan : {dismissalFor(s.className)}
+<Clock className="h-3 w-3 text-primary" /> Jam Kepulangan : {s.dismissalTime ?? "—"}
                 </span>
               </div>
 <span className={cn("grid h-6 w-6 place-items-center rounded-md border-2", checked ? "border-primary bg-primary text-white" : "border-border")}>
@@ -122,6 +121,7 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
             <FriendPicker
               open={friendOpen}
               selected={friendList}
+              students={active}
               onAdd={(f) => setFriendList((prev) => (prev.some((x) => x.id === f.id) ? prev : [...prev, f]))}
               onRemove={(id) => setFriendList((prev) => prev.filter((x) => x.id !== id))}
             />

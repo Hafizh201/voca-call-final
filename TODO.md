@@ -1,17 +1,20 @@
-# TODO — Sinkronisasi data siswa (filter + guard + empty state)
+# TODO — Riwayat pemanggilan ke Supabase
 
-## Goals
-- Jumlah siswa di UI otomatis mengikuti jumlah data siswa valid di `students`
-- Tidak menampilkan slot kosong/placeholder/nama null
-- Tidak crash saat `students` kosong
-- Tidak mengubah Supabase/.env/auth/RLS/schema
-- Tidak mengubah UI/UX existing
+## Selesai
+- [x] Tambah field `idKelas` ke tipe `Student` (dari `siswa.kelas_id`)
+- [x] Tambah field `idPemanggilan` ke `PickupRequest` (referensi record riwayat)
+- [x] Modul baru `src/lib/pickup/history.ts`:
+  - `resolveWaliId(username)` → users.id (UUID)
+  - `insertPickupHistory(req)` → INSERT ke panggil_self/other/ojek sesuai method
+  - `updatePickupCallCount(req)` → UPDATE jumlah_pemanggilan pada row yang sama
+  - `markPickupDone(req)` → UPDATE done=true pada row yang sama
+- [x] Wiring di `simulator.ts`:
+  - `submitPickup` → insert
+  - `triggerSecondCall` → update jumlah_pemanggilan (bukan insert baru)
+  - `finishAndArchive` & `forceStopActivePickup` → mark done
+- [x] Typecheck `npx tsc --noEmit` → DONE=0 (tidak ada error TS)
 
-## Steps
-- [x] `children.tsx`: filter siswa valid + empty state
-- [x] `attendance-today.tsx`: filter siswa valid + empty state
-- [x] `dashboard.tsx`: guard hero card saat daftar kosong
-- [x] `pickup.select.tsx`: guard `active[0]` + empty state
-- [x] `pickup.form.$method.tsx`: guard `[0].id` saat daftar kosong
-- [x] `StudentHeroCard.tsx`: bersihkan artefak komentar "SISWA 2/3"
-- [x] Build `vite build` sukses tanpa error TS/TSX
+## Catatan
+- Semua INSERT/UPDATE fire & forget; error hanya di-`console.error`, tidak menghentikan alur utama.
+- `id_pemanggilan` saat INSERT default = `req.id`; setelah INSERT berhasil disimpan ke state aktif untuk UPDATE recall/done pada row yang sama.
+- Tidak ada perubahan schema/.env/RLS/Supabase config.

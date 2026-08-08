@@ -8,6 +8,7 @@ import {
 } from "../state/stores";
 import { nowHHmm } from "../format/utils";
 import { getStudents } from "../students";
+import { insertPickupHistory, updatePickupCallCount, markPickupDone } from "./history";
 
 export function buildAnnouncement(
   req: Pick<PickupRequest, "studentIds" | "method" | "pickerName"> &
@@ -92,6 +93,8 @@ export function submitPickup(input: Omit<PickupRequest, "id" | "createdAt" | "st
   };
 pickupStore.set({ current: req, history: pickupStore.get().history });
   markStudentCalled(req.studentIds, req.callCount);
+  // Simpan riwayat ke Supabase (fire & forget — tidak menghentikan alur utama).
+  void insertPickupHistory(req);
   if (!req.qrCode) startSimulation(id);
   return req;
 }
@@ -108,6 +111,8 @@ export function finishAndArchive() {
   const s = pickupStore.get();
   if (!s.current) return;
   markStudentPickedUp(s.current.studentIds);
+  // Tandai selesai di riwayat Supabase (fire & forget).
+  void markPickupDone(s.current);
   pickupStore.set({
     current: null,
     history: [{ ...s.current, stage: "done" as PickupStage }, ...s.history].slice(0, 20),
@@ -122,6 +127,8 @@ export function finishAndArchive() {
 export function forceStopActivePickup() {
   const s = pickupStore.get();
   if (!s.current) return;
+// Tandai dihentikan di riwayat Supabase (fire & forget).
+  void markPickupDone(s.current);
   const stopped = {
     ...s.current,
     stage: "done" as PickupStage,
@@ -157,6 +164,8 @@ export function triggerSecondCall(extras: string[]) {
   };
 pickupStore.set({ current: updated });
   markStudentCalled(req.studentIds, nextCount);
+  // Perbarui jumlah_pemanggilan di Supabase pada row yang sama (bukan insert baru).
+  void updatePickupCallCount(updated);
   // simulate short queued -> announcing -> cooldown
   setTimeout(() => {
     const cur = pickupStore.get().current;

@@ -8,7 +8,7 @@ import { BigButton } from "@/components/common/BigButton";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
 import { useStudents } from "@/lib/students";
-import { isPastMaxPickupTime } from "@/lib/pickup/callDeadline";
+import { pickupBlockReason } from "@/lib/pickup/callDeadline";
 import { UserRound, UsersRound, Bike, ChevronRight, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,20 +32,25 @@ function MethodPage() {
 const nav = useNavigate();
 const { students } = useStudents();
 const active = students.filter((s) => !s.pendingApproval);
-  const needsSelect = active.length > 1;
-  const closed = isPastMaxPickupTime();
+const needsSelect = active.length > 1;
+  const block = pickupBlockReason();
   if (!ready) return <PageSkeleton withNav={false} />;
 
-  // Jika waktu pemanggilan sudah ditutup (melewati batas WIB), blokir alur penjemputan.
-  if (closed) {
+  // Jika pemanggilan terblokir (master off ATAU lewat jam tutup di hari sekolah), blokir alur penjemputan.
+  if (block) {
+    const isOff = block === "off";
     return (
       <PhoneShell>
-        <TopBar title="Mulai Jemput" back="/dashboard" subtitle="Pemanggilan ditutup" />
+        <TopBar title="Mulai Jemput" back="/dashboard" subtitle={isOff ? "Pemanggilan nonaktif" : "Pemanggilan ditutup"} />
         <div className="p-5">
           <EmptyState
             icon={<Clock className="h-7 w-7" />}
-            title="Pemanggilan sudah ditutup"
-            body={`Layanan pemanggilan penjemputan telah berakhir pada pukul ${MAX_PICKUP_TIME_WIB} WIB. Anda tidak dapat memulai penjemputan saat ini.`}
+            title={isOff ? "Pemanggilan sedang nonaktif" : "Pemanggilan sudah ditutup"}
+            body={
+              isOff
+                ? "Layanan pemanggilan penjemputan sedang dinonaktifkan oleh pihak sekolah untuk sementara waktu. Anda tidak dapat memulai penjemputan saat ini."
+                : `Layanan pemanggilan penjemputan telah berakhir pada pukul ${MAX_PICKUP_TIME_WIB} WIB. Anda tidak dapat memulai penjemputan saat ini.`
+            }
             action={
               <BigButton onClick={() => nav({ to: "/dashboard" })}>Kembali ke Beranda</BigButton>
             }

@@ -1,6 +1,7 @@
-import type { Student } from "@/lib/dummy/data";
+import type { Student } from "@/lib/students";
 import { Chip } from "@/components/common/Section";
-import { dismissalTime, schoolName } from "@/lib/dummy/data";
+import { schoolName } from "@/lib/dummy/data";
+import { isHoliday } from "@/lib/pickup/schedule";
 
 export function StudentHeroCard({ students }: { students: Student[] }) {
   return (
@@ -28,9 +29,14 @@ export function StudentHeroCard({ students }: { students: Student[] }) {
             </div>
 
             <div className="min-w-0">
-              {student.className ? (
-                <p className="text-[11px] uppercase tracking-wider text-white/70">
+{student.className ? (
+                <p className="text-[11px] tracking-wider text-white/70">
                   Kelas {student.className}
+                  {student.nickname ? ` · ${student.nickname}` : ""}
+                </p>
+              ) : student.nickname ? (
+                <p className="text-[11px] tracking-wider text-white/70">
+                  {student.nickname}
                 </p>
               ) : null}
               <h2 className="mt-[-3px] truncate font-display text-2xl font-bold">
@@ -40,17 +46,28 @@ export function StudentHeroCard({ students }: { students: Student[] }) {
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
-            <Chip tone="success" className="bg-white/20 text-white">
-              Jam Kepulangan : {dismissalTime}
-            </Chip>
-            {student.dismissStatus === "sudah" ? (
-              <Chip tone="success" className="bg-success/40 text-white">
-                Sudah presensi pulang
+            {isHoliday() ? (
+              <Chip tone="warning" className="bg-white/15 text-amber-100 ring-1 ring-white/25">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="text-[10px]">🏖️</span>
+                  Jam Kepulangan Hari Ini: LIBUR
+                </span>
               </Chip>
             ) : (
-              <Chip tone="warning" className="bg-destructive/40 text-white">
-                Belum presensi pulang
-              </Chip>
+              <>
+                <Chip tone="success" className="bg-white/20 text-white">
+                  Jam Kepulangan : {student.dismissalTime ?? "—"}
+                </Chip>
+                {student.dismissStatus === "sudah" ? (
+                  <Chip tone="success" className="bg-success/40 text-white">
+                    Sudah presensi pulang
+                  </Chip>
+                ) : (
+                  <Chip tone="warning" className="bg-destructive/40 text-white">
+                    Belum presensi pulang
+                  </Chip>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -2,12 +2,15 @@ import { useQuery } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSession } from "@/lib/state/stores";
+import { getDayPulang } from "@/lib/pickup/schedule";
 
 export type Student = {
   id: string;
   name: string;
   nickname: string;
   className: string;
+  /** ID kelas (kelas.id, UUID) dari relasi siswa.kelas_id — dipakai untuk riwayat pemanggilan. */
+  idKelas?: string;
   nis: string;
   avatarColor: string;
   attendedAt?: string;
@@ -15,6 +18,8 @@ export type Student = {
   attendanceStatus: "hadir" | "izin" | "belum";
   dismissStatus: "belum" | "sudah";
   pendingApproval?: boolean;
+  /** Jam kepulangan sekolah sesuai HARI & KELAS siswa (dari database). */
+  dismissalTime?: string;
 };
 
 const AVATAR_COLORS = [
@@ -29,27 +34,26 @@ const AVATAR_COLORS = [
 ];
 
 /**
- * Ambil data siswa dari database online (Supabase) untuk wali murid yang sedang
- * login.
+ * Ambil data siswa dari database (Supabase) untuk wali murid yang sedang login.
  *
- * Struktur yang dipakai (schema yang SUDAH ADA, tidak ada perubahan DB):
- *  - tabel `users`  : `id`, `username`, `nama_walmur`, `pin`, `status_user`
- *  - tabel `siswa`  : `id`, `user_id1`, `user_id2`, `nama`, `nis`, `kelas_id`,
- *                     `nick`, `presensi_pulang`, `senin_ex..jumat_ex`
- *  - tabel `kelas`  : `id`, `nama_kelas`, `senin_pulang..jumat_pulang`
+ * Struktur skema yang dipakai (sudah ada, tanpa perubahan DB):
+ *  - tabel `users` : `id`, `username`, `nama_walmur`, `pin`, `status_user`
+ *  - tabel `siswa` : `id`, `user_id1`, `user_id2`, `nama`, `nis`, `kelas_id`,
+ *                    `nick`, `presensi_pulang`, `senin_ex..jumat_ex`
+ *  - tabel `kelas` : `id`, `nama_kelas`, `senin_pulang..jumat_pulang`
  *
  * Relasi:
  *  - siswa.kelas_id -> kelas.id
- *  - siswa dipunyai oleh user bila user_id1 = user.id ATAU user_id2 = user.id
+ *  - siswa dipunyai user bila user_id1 = user.id ATAU user_id2 = user.id
  *    (kedua relasi diperiksa, bukan hanya user_id1).
  *
- * Hanya siswa yang memiliki nama (bukan null / string kosong) yang dikembalikan.
- * Jumlah siswa tidak dibatasi — jika ada lebih dari 3 siswa, semuanya dikembalikan.
+ * Hanya siswa yang memiliki nama (bukan null / kosong) yang dikembalikan.
+ * Jumlah siswa tidak dibatasi — mengikuti isi database (1, 2, 3, atau lebih).
  */
 export async function fetchStudents(username: string | null): Promise<Student[]> {
   if (!username) return [];
 
-  // Dapatkan id user yang sedang login berdasarkan username.
+  // 1) Dapatkan id user yang sedang login berdasarkan username.
   const { data: userData, error: userError } = await supabase
     .from("users")
     .select("id")
@@ -59,29 +63,37 @@ export async function fetchStudents(username: string | null): Promise<Student[]>
   if (userError || !userData) return [];
   const userId = userData.id;
 
-  // Ambil semua siswa milik user tersebut (user_id1 ATAU user_id2), beserta
-  // nama kelas & jadwal kepulangan lewat relasi siswa.kelas_id -> kelas.id.
+  // 2) Ambil semua siswa milik user (user_id1 ATAU user_id2) beserta nama
+  //    kelas & jadwal kepulangan lewat relasi siswa.kelas_id -> kelas.id.
   const { data, error } = await supabase
     .from("siswa")
     .select(
-      "id, nama, nis, kelas_id, nick, presensi_pulang, \
-       kelas:kelas_id(id, nama_kelas, senin_pulang, selasa_pulang, rabu_pulang, kamis_pulang, jumat_pulang)"
+"id, nama, nis, kelas_id, nick, presensi_pulang, " +
+        "kelas:kelas_id(id, nama_kelas, senin_pulang, selasa_pulang, rabu_pulang, kamis_pulang, jumat_pulang)"
     )
     .or(`user_id1.eq.${userId},user_id2.eq.${userId}`);
 
   if (error || !data) return [];
 
-  return data
-    .filter((s) => typeof s.nama === "string" && s.nama.trim().length > 0)
+  const rows = data as unknown as Array<Record<string, unknown>>;
+
+  return rows
+    .filter((s) => typeof s.nama === "string" && (s.nama as string).trim().length > 0)
     .map((s, i) => {
       // Relasi kelas dikembalikan sebagai array oleh Supabase; ambil elemen pertama.
-      const kls = Array.isArray(s.kelas) ? s.kelas[0] : s.kelas;
-      return {
+      const klsArr = s.kelas as unknown as Array<Record<string, unknown>> | Record<string, unknown> | undefined;
+      const kls = Array.isArray(klsArr) ? klsArr[0] : klsArr;
+return {
         id: String(s.id),
-        name: s.nama.trim(),
-        nickname: (s.nick && String(s.nick).trim()) || s.nama.trim().split(/\s+/)[0],
-        className: (kls?.nama_kelas as string | undefined)?.trim() || "",
+        idKelas: s.kelas_id ? String(s.kelas_id) : undefined,
+        name: (s.nama as string).trim(),
+        nickname:
+          (typeof s.nick === "string" && s.nick.trim()) ||
+          (s.nama as string).trim().split(/\s+/)[0],
+className: (kls?.nama_kelas as string | undefined)?.trim() || "",
         nis: (s.nis as string | undefined)?.trim() || "",
+        /** Jam pulang hari ini sesuai kelas (kolom `{hari}_pulang` di tabel kelas). */
+        dismissalTime: getDayPulang(kls) ?? undefined,
         avatarColor: AVATAR_COLORS[i % AVATAR_COLORS.length],
         attendanceStatus: "belum" as const,
         dismissStatus: s.presensi_pulang ? ("sudah" as const) : ("belum" as const),
@@ -115,8 +127,8 @@ export function useStudentsCache() {
 
 /**
  * Hook utama untuk mengambil data siswa dari Supabase.
- * Data otomatis mengikuti jumlah siswa yang benar-benar tersedia di database.
- * Diperbarui melalui kedua relasi (user_id1 & user_id2).
+ * Data otomatis mengikuti jumlah siswa yang benar-benar tersedia di database,
+ * dan diperbarui melalui kedua relasi (user_id1 & user_id2).
  */
 export function useStudents() {
   const session = useSession();
@@ -137,4 +149,3 @@ export function useStudents() {
     isError: query.isError,
   };
 }
-

@@ -54,8 +54,8 @@ function serverSnapshot<T>(initial: T) {
 }
 
 // ============ SESSION ============
-export type SessionState = { username: string | null; namaWalmur: string | null; signedIn: boolean };
-const sessionInitial: SessionState = { username: null, namaWalmur: null, signedIn: false };
+export type SessionState = { username: string | null; namaWalmur: string | null; statusUser: string | null; signedIn: boolean };
+const sessionInitial: SessionState = { username: null, namaWalmur: null, statusUser: null, signedIn: false };
 export const sessionStore = createStore<SessionState>("panggil.session", sessionInitial);
 export const useSession = () =>
   useSyncExternalStore(sessionStore.subscribe, sessionStore.get, serverSnapshot(sessionInitial));
@@ -96,6 +96,8 @@ export type TimelineEntry = { at: string; label: string; stage: PickupStage };
 
 export type PickupRequest = {
   id: string;
+  /** ID record riwayat Supabase (panggil_self/other/ojek) hasil INSERT pertama — dipakai untuk UPDATE recall/done. */
+  idPemanggilan?: string;
   studentIds: string[];
   method: "self" | "other" | "ojek";
   note: string;

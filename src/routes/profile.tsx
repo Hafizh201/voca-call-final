@@ -43,7 +43,7 @@ function Profile() {
       <div className="p-5">
         <div className="rounded-3xl bg-gradient-hero p-5 text-primary-foreground shadow-elevated">
           <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Wali murid</p>
-<p className="mt-1 font-display text-xl font-bold">{session.namaWalmur ?? session.username ?? "Wali"}</p>
+<p className="mt-1 font-display text-xl font-bold">{[session.statusUser, session.namaWalmur ?? session.username ?? ""].filter(Boolean).join(" ")}</p>
           <p className="text-xs text-white/70">SMPIT Abu Bakar Fullday School</p>
         </div>
 
@@ -78,7 +78,7 @@ function Profile() {
             variant="danger"
             leading={<LogOut className="h-5 w-5" />}
             onClick={() => {
-sessionStore.set({ signedIn: false, username: null, namaWalmur: null });
+sessionStore.set({ signedIn: false, username: null, namaWalmur: null, statusUser: null });
               nav({ to: "/login" });
             }}
           >

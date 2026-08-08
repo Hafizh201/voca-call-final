@@ -8,8 +8,7 @@ import { TopBar } from "@/components/layout/TopBar";
 import { BigButton } from "@/components/common/BigButton";
 import { SmartNoteAssistant } from "@/components/pickup/SmartNoteAssistant";
 import { PlateInput, TextField, SelectField, DropdownField } from "@/components/pickup/Fields";
-import { friends, dismissalFor, type Student, type Friend } from "@/lib/dummy/data";
-import { useStudents } from "@/lib/students";
+import { useStudents, type Student } from "@/lib/students";
 import { isValidPlate } from "@/lib/format/utils";
 import { Users, Clock, Megaphone, QrCode, AlertTriangle } from "lucide-react";
 import { QrGuideDialog } from "@/components/pickup/QrGuideDialog";
@@ -40,6 +39,10 @@ function FormPage() {
   const [noteValid, setNoteValid] = useState(true);
   const [qrAsk, setQrAsk] = useState(false);
 
+  // Hook MESI dipanggil SIAPAPUN sebelum early return, agar jumlah & urutan
+  // hook konsisten di setiap render (aturan Rules of Hooks).
+  const { students } = useStudents();
+
   useEffect(() => {
     setDraft({ ...state, method });
   }, [state, method]);
@@ -49,13 +52,11 @@ function FormPage() {
 const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
     setState((p) => ({ ...p, [k]: v }));
 
-const { students } = useStudents();
 const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApproval);
   const studentIds = (s ?? firstActive?.id ?? "").split(",").filter(Boolean);
   const friendIds: string[] = method === "ojek" || !f ? [] : f.split(",").filter(Boolean);
-  const friendList: Friend[] = friendIds
-    .map((id) => friends.find((x) => x.id === id))
-    .filter((x): x is Friend => Boolean(x));
+  // Teman dijemput bersama diambil langsung dari database (siswa) berdasarkan id dari search param `f`.
+  const friendList: Student[] = students.filter((x) => friendIds.includes(x.id));
 
   const selectedStudents: Student[] = students.filter((x) => studentIds.includes(x.id));
 
@@ -64,12 +65,14 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
       key: st.id,
       name: st.name,
       className: st.className,
+      dismissalTime: st.dismissalTime,
       isFriend: false,
     })),
-    ...friendList.map((fr: Friend) => ({
+    ...friendList.map((fr: Student) => ({
       key: fr.id,
       name: fr.name,
       className: fr.className,
+      dismissalTime: fr.dismissalTime,
       isFriend: true,
     })),
   ];
@@ -125,9 +128,9 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
                     {p.isFriend ? "Teman" : "Ananda"}
                   </p>
                 </div>
-                <span className="flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-bold text-ink">
+<span className="flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[10px] font-bold text-ink">
                   <Clock className="h-3 w-3 text-primary" />
-                  {dismissalFor(p.className)}
+                  {p.dismissalTime ?? "—"}
                 </span>
               </li>
             ))}

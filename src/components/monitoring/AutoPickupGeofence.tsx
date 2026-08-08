@@ -9,13 +9,12 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
-  Radio,
   Wifi,
   ShieldAlert,
-  X,
   Clock,
   Users,
   Megaphone,
+  Hourglass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BottomSheet } from "@/components/common/BottomSheet";
@@ -24,8 +23,9 @@ import { BottomSheet } from "@/components/common/BottomSheet";
 import { pickupStore, useActivePickup, STAGE_ORDER, type PickupStage } from "@/lib/state/stores";
 import { nowHHmm } from "@/lib/format/utils";
 import { useStudentsCache } from "@/lib/students";
+import { pickupBlockReason, isPastDismissalTime, nowWIB } from "@/lib/pickup/callDeadline";
 
-type GpsState = "searching" | "outside" | "approaching" | "arrived" | "unavailable";
+type GpsState = "searching" | "outside" | "approaching" | "arrived" | "standby" | "unavailable";
 
 const DISTANCE_SEQUENCE = [2100, 1400, 900, 500, 250, 150, 120, 85, 50, 0];
 
@@ -64,6 +64,13 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
     chip: "bg-success/25 text-success-foreground",
     label: "Tiba",
   },
+  standby: {
+    ring: "ring-info/40",
+    text: "text-info-foreground",
+    bg: "from-info/20 to-info/10",
+    chip: "bg-info/20 text-info-foreground",
+    label: "Menunggu jam pulang",
+  },
   unavailable: {
     ring: "ring-warning/50",
     text: "text-warning-foreground",
@@ -73,20 +80,93 @@ const TONE: Record<GpsState, { ring: string; text: string; bg: string; chip: str
   },
 };
 
+// ===== Persistensi sepanjang hari (localStorage) =====
+const STORAGE_PREFIX = "auto-pickup-v1";
+
+function todayKey(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function loadPersisted(): { ids: string[] } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { date?: string; ids?: string[] };
+    // Hanya berlaku untuk hari yang sama. Hari berganti → reset (mati).
+    if (parsed.date !== todayKey()) {
+      localStorage.removeItem(STORAGE_PREFIX);
+      return null;
+    }
+    return { ids: Array.isArray(parsed.ids) ? parsed.ids : [] };
+  } catch {
+    return null;
+  }
+}
+
+function savePersisted(ids: string[]) {
+  try {
+    localStorage.setItem(STORAGE_PREFIX, JSON.stringify({ date: todayKey(), ids }));
+  } catch {
+    /* ignore */
+  }
+}
+
+function clearPersisted() {
+  try {
+    localStorage.removeItem(STORAGE_PREFIX);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function AutoPickupGeofence() {
   const { current } = useActivePickup();
   const students = useStudentsCache();
-  const [autoMode, setAutoMode] = useState(false);
-  const [sheetOpen, setSheetOpen] = useState(false);
   const selectableStudents = useMemo(() => students.filter((s) => !s.pendingApproval), [students]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  // State awal di-*hydrate* dari localStorage (aktif sepanjang hari yang sama).
+  const [autoMode, setAutoMode] = useState<boolean>(() => loadPersisted() !== null);
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => loadPersisted()?.ids ?? []);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [closedOpen, setClosedOpen] = useState(false);
   const [draftIds, setDraftIds] = useState<string[]>([]);
   const selectedStudents = selectableStudents.filter((s) => selectedIds.includes(s.id));
   const [state, setState] = useState<GpsState>("searching");
   const [distance, setDistance] = useState<number>(DISTANCE_SEQUENCE[0]);
   const [stepIndex, setStepIndex] = useState(0);
   const firedRef = useRef(false);
+  const standbyNotifiedRef = useRef(false);
 
+  // Simpan/muat ulang persistensi setiap kali selectedIds / autoMode berubah.
+  useEffect(() => {
+    if (autoMode && selectedIds.length > 0) {
+      savePersisted(selectedIds);
+    } else {
+      clearPersisted();
+    }
+  }, [autoMode, selectedIds]);
+
+  // Tangkap pergantian hari saat aplikasi dibuka (mis. semalaman dibiarkan terbuka).
+  useEffect(() => {
+    const onVisible = () => {
+      const persisted = loadPersisted();
+      // Hari berganti → mati otomatis.
+      if (autoMode && persisted === null) {
+        setAutoMode(false);
+        setSelectedIds([]);
+        firedRef.current = false;
+        setState("searching");
+        setStepIndex(0);
+        setDistance(DISTANCE_SEQUENCE[0]);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode]);
 
   // initial GPS "search"
   useEffect(() => {
@@ -100,11 +180,11 @@ export function AutoPickupGeofence() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoMode, state]);
 
-
   // distance progression when tracking
   useEffect(() => {
     if (!autoMode) return;
-    if (state === "searching" || state === "unavailable" || state === "arrived") return;
+    if (state === "searching" || state === "unavailable") return;
+    if (state === "arrived" || state === "standby") return;
 
     const t = setTimeout(() => {
       const next = Math.min(stepIndex + 1, DISTANCE_SEQUENCE.length - 1);
@@ -122,21 +202,73 @@ export function AutoPickupGeofence() {
     return () => clearTimeout(t);
   }, [stepIndex, state, autoMode]);
 
-  // when arriving with auto mode, run smart auto call sequence
+  // Saat tiba (masuk radius): jika belum jam pulang → stand-by, baru panggil setelah jam pulang.
   useEffect(() => {
     if (!autoMode) return;
-    if (state !== "arrived" || firedRef.current) return;
-    firedRef.current = true;
+    if (state === "arrived" || state === "standby") {
+      // Cek apakah sudah lewat jam kepulangan untuk semua siswa terpilih.
+      const allPast = selectedStudents.every((s) => isPastDismissalTime(s.dismissalTime));
+      const blocking = pickupBlockReason() !== null;
 
+      if (blocking) {
+        // Hari tutup — jangan panggil.
+        return;
+      }
+
+      if (!allPast) {
+        // Belum jam pulang → tetap di status tiba, tapi masuk mode stand-by.
+        setState("standby");
+        if (!standbyNotifiedRef.current) {
+          standbyNotifiedRef.current = true;
+          appendTimeline("Sampai sekolah · menunggu jam kepulangan", "verified");
+          toast.info("Sudah sampai sekolah", {
+            description: "Ananda menunggu jam kepulangan sebelum dipanggil otomatis.",
+          });
+        }
+        return;
+      }
+
+      // Sudah lewat jam pulang → jalankan pemanggilan otomatis.
+      if (firedRef.current) return;
+      firedRef.current = true;
+      runAutoCall(selectedStudents);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, autoMode, selectedStudents]);
+
+  // Watchdog: saat stand-by, cek setiap menit hingga jam pulang tercapai, lalu panggil.
+  useEffect(() => {
+    if (!autoMode || state !== "standby") return;
+    if (selectedStudents.length === 0) return;
+
+    const allPast = selectedStudents.every((s) => isPastDismissalTime(s.dismissalTime));
+    if (allPast && !firedRef.current) {
+      firedRef.current = true;
+      runAutoCall(selectedStudents);
+      return;
+    }
+
+    const t = setInterval(() => {
+      const past = selectedStudents.every((s) => isPastDismissalTime(s.dismissalTime));
+      if (past && !firedRef.current) {
+        firedRef.current = true;
+        runAutoCall(selectedStudents);
+        clearInterval(t);
+      }
+    }, 60_000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, autoMode, selectedStudents]);
+
+  function runAutoCall(studentsToCall: typeof selectedStudents) {
     appendTimeline("Memasuki radius sekolah", "verified");
-    if (!autoMode) return;
     const steps: { at: number; label: string; stage: PickupStage }[] = [
       { at: 600, label: "Radius terdeteksi", stage: "verified" },
       { at: 1400, label: "Permintaan dibuat otomatis", stage: "processed" },
       { at: 2200, label: "Data terkirim ke sistem", stage: "processed" },
       { at: 3000, label: "Menunggu verifikasi petugas", stage: "queued" },
     ];
-    const names = selectedStudents.map((s) => s.nickname).join(", ");
+    const names = studentsToCall.map((s) => s.nickname).join(", ");
     const timers = steps.map((s) =>
       setTimeout(() => appendTimeline(s.label, s.stage), s.at),
     );
@@ -148,12 +280,12 @@ export function AutoPickupGeofence() {
         });
       }, 3800),
     );
-
     return () => timers.forEach(clearTimeout);
-  }, [state, autoMode]);
+  }
 
   function retry() {
     firedRef.current = false;
+    standbyNotifiedRef.current = false;
     setStepIndex(0);
     setDistance(DISTANCE_SEQUENCE[0]);
     setState("searching");
@@ -174,10 +306,10 @@ export function AutoPickupGeofence() {
 
   function disableAutoMode() {
     setAutoMode(false);
+    setSelectedIds([]);
+    clearPersisted();
     retry();
   }
-
-
 
   function simulateUnavailable() {
     setState("unavailable");
@@ -191,6 +323,18 @@ export function AutoPickupGeofence() {
 
   const firstStudent = current ? students.find((s) => s.id === current.studentIds[0]) : null;
   const dismissed = firstStudent?.dismissStatus === "sudah";
+
+  function handleToggle(v: boolean) {
+    if (!v) {
+      disableAutoMode();
+      return;
+    }
+    if (pickupBlockReason() !== null) {
+      setClosedOpen(true);
+      return;
+    }
+    openSheet();
+  }
 
   return (
     <div className="mx-5 mt-5 space-y-4">
@@ -241,6 +385,20 @@ export function AutoPickupGeofence() {
                   <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     <span>Mengambil sinyal GPS…</span>
+                  </div>
+                )}
+
+                {state === "standby" && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center gap-2 rounded-2xl bg-info/15 px-3 py-2 text-[11px] font-semibold text-info-foreground">
+                      <Hourglass className="h-4 w-4 animate-pulse" />
+                      Anda sudah sampai sekolah, tapi belum jam kepulangan. Ananda akan dipanggil otomatis setelah jam pulang.
+                    </div>
+<p className="text-[11px] text-muted-foreground">
+                      Jam pulang hari ini:{" "}
+                      {selectedStudents.map((s) => s.dismissalTime).filter(Boolean).join(" / ") || "—"} · WIB sekarang{" "}
+                      {(() => { const w = nowWIB(); return `${String(w.hours).padStart(2, "0")}.${String(w.minutes).padStart(2, "0")}`; })()}
+                    </p>
                   </div>
                 )}
 
@@ -295,7 +453,7 @@ export function AutoPickupGeofence() {
             </div>
             <Switch
               checked={autoMode}
-              onCheckedChange={(v) => (v ? openSheet() : disableAutoMode())}
+              onCheckedChange={handleToggle}
               className="h-6 w-11 shrink-0 data-[state=checked]:bg-primary [&>span]:h-5 [&>span]:w-5 [&>span]:data-[state=checked]:translate-x-5"
             />
           </div>
@@ -325,7 +483,7 @@ export function AutoPickupGeofence() {
             autoMode ? "bg-surface-2 text-muted-foreground" : "bg-warning/15 text-warning-foreground",
           )}>
             {autoMode
-              ? "Saat Anda memasuki radius sekolah, sistem akan mengirim permintaan penjemputan secara otomatis."
+              ? "Tetap aktif sepanjang hari (bahkan saat browser ditutup). Ananda otomatis dipanggil setelah jam kepulangan saat Anda memasuki radius sekolah."
               : "Mode lokasi dimatikan. Anda harus melakukan pemanggilan secara manual menggunakan tombol di bawah."}
           </p>
         </div>
@@ -389,6 +547,39 @@ export function AutoPickupGeofence() {
         </ul>
       </BottomSheet>
 
+      <BottomSheet
+        open={closedOpen}
+        title="Pemanggilan otomatis belum tersedia"
+        description="Panggil Otomatis (GPS) tidak dapat diaktifkan saat ini."
+        onClose={() => setClosedOpen(false)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setClosedOpen(false)}
+            className="w-full rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-primary-foreground shadow-card transition active:scale-95"
+          >
+            Mengerti
+          </button>
+        }
+      >
+        <div className="space-y-3">
+          {pickupBlockReason() === "off" ? (
+            <div className="rounded-2xl bg-warning/15 px-4 py-3 text-xs leading-relaxed text-warning-foreground">
+              Layanan pemanggilan penjemputan sedang dinonaktifkan oleh pihak sekolah untuk sementara waktu, sehingga
+              Panggil Otomatis (GPS) tidak dapat diaktifkan.
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-warning/15 px-4 py-3 text-xs leading-relaxed text-warning-foreground">
+              Layanan pemanggilan penjemputan sudah melewati batas waktu hari ini. Anda tidak dapat mengaktifkan
+              Panggil Otomatis (GPS) hingga hari berikutnya.
+            </div>
+          )}
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Anda dapat menghubungi Admin Penjemputan sekolah jika memerlukan bantuan lebih lanjut.
+          </p>
+        </div>
+      </BottomSheet>
+
     </div>
 
   );
@@ -397,7 +588,8 @@ export function AutoPickupGeofence() {
 function StateIcon({ state }: { state: GpsState }) {
   const cls = "h-3 w-3";
   if (state === "searching") return <Loader2 className={cn(cls, "animate-spin")} />;
-  if (state === "arrived") return <CheckCircle2 className={cls} />; 
+  if (state === "arrived") return <CheckCircle2 className={cls} />;
+  if (state === "standby") return <Hourglass className={cn(cls, "animate-pulse")} />;
   if (state === "unavailable") return <AlertTriangle className={cls} />;
   return <MapPin className={cls} />;
 }
@@ -408,6 +600,7 @@ function titleFor(state: GpsState) {
     outside: "Anda berada di luar radius sekolah",
     approaching: "Anda hampir tiba",
     arrived: "Anda telah memasuki area sekolah",
+    standby: "Sudah sampai · menunggu jam kepulangan",
     unavailable: "Lokasi tidak tersedia",
   }[state];
 }
@@ -418,6 +611,7 @@ function descriptionFor(state: GpsState) {
     outside: "",
     approaching: "",
     arrived: "",
+    standby: "",
     unavailable: "",
   }[state];
 }
@@ -433,22 +627,25 @@ function Radar({ state, pct }: { state: GpsState; pct: number }) {
       <div className={cn(
         "absolute inset-0 rounded-full border border-primary/20 animate-radar",
         state === "arrived" && "border-success/40",
+        state === "standby" && "border-info/40",
         state === "unavailable" && "border-warning/40",
       )} />
       <div className={cn(
         "absolute inset-2 rounded-full border border-primary/30 animate-radar [animation-delay:400ms]",
         state === "arrived" && "border-success/50",
+        state === "standby" && "border-info/50",
         state === "unavailable" && "border-warning/50",
       )} />
       <div className={cn(
         "absolute inset-4 rounded-full border border-primary/40 animate-radar [animation-delay:800ms]",
         state === "arrived" && "border-success/60",
+        state === "standby" && "border-info/60",
         state === "unavailable" && "border-warning/60",
       )} />
       <div
         className={cn(
           "relative grid h-10 w-10 place-items-center rounded-full text-white shadow-glow transition-all",
-          state === "arrived" ? "bg-success" : state === "unavailable" ? "bg-warning" : "bg-primary",
+          state === "arrived" ? "bg-success" : state === "standby" ? "bg-info" : state === "unavailable" ? "bg-warning" : "bg-primary",
         )}
         style={{ boxShadow: `0 0 ${12 + glow * 20}px hsl(var(--primary) / ${glow})` }}
       >
