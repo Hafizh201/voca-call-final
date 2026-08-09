@@ -21,9 +21,10 @@ import {
   Cpu,
   ClipboardCheck,
   ClipboardX,
-  MessageSquareText,
+MessageSquareText,
   Check,
   X,
+  Home,
 } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/feedback/EmptyState";
@@ -112,6 +113,16 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
   return (
     <PhoneShell>
       <TopBar title="Monitoring Penjemputan" back="/dashboard" subtitle="Ananda sedang menuju gerbang" />
+
+<div className="mx-5 mt-4">
+        <button
+          type="button"
+          onClick={() => nav({ to: "/dashboard" })}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-4 py-3 text-sm font-bold text-ink shadow-card transition active:scale-[0.98]"
+        >
+          <Home className="h-4 w-4" /> Kembali ke Beranda
+        </button>
+      </div>
 
       <div className="mx-5 mt-4 rounded-3xl bg-gradient-hero p-5 text-primary-foreground shadow-elevated">
         <p className="text-[10px] font-bold uppercase tracking-wider text-white/70">Status saat ini</p>

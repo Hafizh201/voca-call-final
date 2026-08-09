@@ -342,6 +342,7 @@ export type PickupHistoryItem = {
   date: string;
   time: string;
   status: string;
+  ts: number; // timestamp mentah (ms) untuk filter yang akurat
 };
 
 const METHOD_LABEL: Record<string, string> = {
@@ -392,13 +393,14 @@ export async function fetchPickupHistory(): Promise<PickupHistoryItem[]> {
       const time = d
         ? d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
         : "-";
-      results.push({
+results.push({
         id: String(raw.id_pemanggilan),
         student: raw.nama_siswa?.trim() || "-",
         method: label,
         date,
         time,
         status: raw.done ? "Selesai" : "Diproses",
+        ts: d ? d.getTime() : Number(raw.id_pemanggilan) || Date.now(),
       });
     }
   }

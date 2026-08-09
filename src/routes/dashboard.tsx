@@ -15,13 +15,15 @@ import { contacts } from "@/lib/dummy/data";
 import { useSession, useActivePickup } from "@/lib/state/stores";
 import { useStudents } from "@/lib/students";
 import { greeting } from "@/lib/format/utils";
-import { PhoneCall, History, ClipboardList, Wifi, WifiOff, Bell, LifeBuoy, Clock, Phone } from "lucide-react";
+import { PhoneCall, History, Megaphone, Wifi, WifiOff, LifeBuoy, Clock, Phone, PackageOpen, UserRoundCheck } from "lucide-react";
 import { useConnection } from "@/hooks/use-connection";
 import { pickupBlockReason } from "@/lib/pickup/callDeadline";
 import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
 import { AutoPickupGeofence } from "@/components/monitoring/AutoPickupGeofence";
 import { NotificationsFloating } from "@/components/notifications/NotificationsFloating";
 import { CctvPanel } from "@/components/common/CctvPanel";
+import { useActiveCall, completeCall } from "@/lib/call/stores";
+import { useStudents as useStudentsForCall } from "@/lib/students";
 
 
 export const Route = createFileRoute("/dashboard")({
@@ -113,10 +115,12 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
             nav({ to: "/pickup/method" });
           }}
         />
-        <QuickAction to="/history" icon={<History className="h-5 w-5" />} title="Riwayat" body="Cek pemanggilan lalu" />
-        <QuickAction to="/attendance-today" icon={<ClipboardList className="h-5 w-5" />} title="Presensi Hari Ini" body="Anak Anda" />
-        <QuickAction to="/help" icon={<LifeBuoy className="h-5 w-5" />} title="Bantuan" body="Panduan & kontak" />
+<QuickAction to="/history" icon={<History className="h-5 w-5" />} title="Riwayat" body="Cek pemanggilan lalu" />
+        <QuickAction to="/call/method" icon={<Megaphone className="h-5 w-5" />} title="Panggil" body="Titipan atau ditunggu" />
+<QuickAction to="/help" icon={<LifeBuoy className="h-5 w-5" />} title="Bantuan" body="Panduan & kontak" />
       </div>
+
+      <CallStatusCard />
 {/*
       <div className="mt-8">
         <SectionHeader title="Status Sistem" />
@@ -202,9 +206,57 @@ function QuickAction({
     );
   }
 
-  return (
+return (
     <Link to={to} className={base}>
       {inner}
     </Link>
+  );
+}
+
+function CallStatusCard() {
+  const { current } = useActiveCall();
+  const { students } = useStudentsForCall();
+  const nav = useNavigate();
+
+  if (!current || current.done) return null;
+
+  const names = current.studentIds
+    .map((id) => students.find((s) => s.id === id)?.name)
+    .filter(Boolean)
+    .join(", ");
+
+const isTitipan = current.type === "titipan";
+  const detail = isTitipan ? `Titipan untuk ${names}` : `${names} ditunggu menunggumu`;
+
+  return (
+    <div className="mx-5 mt-4">
+      <div className="flex items-start gap-3 rounded-3xl border border-border bg-surface p-4 shadow-card">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+          {isTitipan ? <PackageOpen className="h-5 w-5" /> : <UserRoundCheck className="h-5 w-5" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-sm font-bold text-ink">
+            {isTitipan ? "Panggilan Titipan Aktif" : "Panggilan Ditunggu Aktif"}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => nav({ to: "/monitoring" })}
+              className="rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-card active:scale-95"
+            >
+              Lihat Status
+            </button>
+            <button
+              type="button"
+              onClick={() => completeCall(current.id)}
+              className="rounded-full border border-border px-3 py-1.5 text-[11px] font-bold text-muted-foreground active:scale-95"
+            >
+              {isTitipan ? "Sudah diambil" : "Selesai"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

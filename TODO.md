@@ -1,19 +1,22 @@
-# TODO — Perbaikan & peningkatan riwayat pemanggilan
+# TODO — Fitur Panggil Ditunggu & Ambil Titipan
 
-## Riwayat Supabase (selesai)
-- [x] INSERT riwayat saat submit (fire & forget)
-- [x] UPDATE jumlah_pemanggilan saat recall (row sama)
-- [x] UPDATE done=true saat selesai (row sama)
-- [x] RLS policy (`supabase/rls-pemicu.sql`) untuk panggil_self/other/ojek
-- [x] CCTV panel debug (INSERT/UPDATE/tabel/error/id/jumlah)
+## Fitur baru "Panggil" (UI/UX dulu, backend menyusul)
+- [x] Investigasi struktur pickup flow, form, router, monitoring, dashboard
+- [x] Buat `src/lib/call/stores.ts` — store status aktif (ditunggu/titipan) + flag done/taken
+- [x] Buat `src/routes/call.method.tsx` (`/call/method`) — pilihan "Ambil Titipan" / "Panggil Ditunggu" (copy desain pickup.method)
+- [x] Buat `src/routes/call.form.$type.tsx` (`/call/form/$type`) — form dinamis kedua jenis
+  - `ditunggu`: ditunggu_oleh, posisi_tunggu, short_messg
+  - `titipan`: nama_penitip, jenis_titipan, short_messg
+  - Tanpa teks pemanggilan
+  - Tanpa recall/cooldown untuk titipan
+- [x] Ganti tombol "Presensi Hari Ini" di dashboard → tombol "Panggil" → `/call/method`
+- [x] Monitoring: tambah tombol "Kembali ke Beranda"
+- [x] Pop-up dashboard: status "sudah diambil / belum" untuk titipan (CallStatusCard)
 
-## Peningkatan baru (selesai)
-- [x] `waktu_pemanggilan` sekarang dikirim dalam WIB (+07:00)
-- [x] `nama_siswa` menampung SEMUA siswa dalam satu kolom, dipisah koma
-- [x] Halaman Riwayat (`/history`) terhubung ke database Supabase via `fetchPickupHistory()`
-- [x] Halaman Riwayat menampilkan state loading, hapus data (refresh), dan filter tanggal
-- [x] Verifikasi typecheck (`npx tsc --noEmit` → DONE=0)
+## Verifikasi
+- [x] `npx tsc --noEmit` → TSC_EXIT=0 (tidak ada error)
+- [x] Route baru terdaftar di routeTree.gen.ts (dev server regenerate)
 
-## Catatan
-- Format id_pemanggilan: BIGINT numerik (timestamp), bukan string `req-...`
-- nama_siswa di kolom DB berisi mis. "Ali, Budi, Citra" (bisa `.split(", ")`)
+## Backend (menyusul / tahap berikutnya)
+- [ ] INSERT ke `panggil_ditunggu` / `panggil_titipan` saat submit
+- [ ] Update status done/taken ke database

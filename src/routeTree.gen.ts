@@ -23,6 +23,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SchoolRouteImport } from './routes/school'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TrustedPickupRouteImport } from './routes/trusted-pickup'
+import { Route as CallMethodRouteImport } from './routes/call.method'
 import { Route as LoginPinRouteImport } from './routes/login_.pin'
 import { Route as PickupCompleteRouteImport } from './routes/pickup.complete'
 import { Route as PickupMethodRouteImport } from './routes/pickup.method'
@@ -30,6 +31,7 @@ import { Route as PickupPreviewRouteImport } from './routes/pickup.preview'
 import { Route as PickupSelectRouteImport } from './routes/pickup.select'
 import { Route as PickupWaitingRouteImport } from './routes/pickup.waiting'
 import { Route as SettingsAccessibilityRouteImport } from './routes/settings.accessibility'
+import { Route as CallFormTypeRouteImport } from './routes/call.form.$type'
 import { Route as PickupFormMethodRouteImport } from './routes/pickup.form.$method'
 
 const IndexRoute = IndexRouteImport.update({
@@ -102,6 +104,11 @@ const TrustedPickupRoute = TrustedPickupRouteImport.update({
   path: '/trusted-pickup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallMethodRoute = CallMethodRouteImport.update({
+  id: '/call/method',
+  path: '/call/method',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginPinRoute = LoginPinRouteImport.update({
   id: '/login_/pin',
   path: '/login/pin',
@@ -137,6 +144,11 @@ const SettingsAccessibilityRoute = SettingsAccessibilityRouteImport.update({
   path: '/accessibility',
   getParentRoute: () => SettingsRoute,
 } as any)
+const CallFormTypeRoute = CallFormTypeRouteImport.update({
+  id: '/call/form/$type',
+  path: '/call/form/$type',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PickupFormMethodRoute = PickupFormMethodRouteImport.update({
   id: '/pickup/form/$method',
   path: '/pickup/form/$method',
@@ -158,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/method': typeof CallMethodRoute
   '/login/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -165,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/pickup/select': typeof PickupSelectRoute
   '/pickup/waiting': typeof PickupWaitingRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
+  '/call/form/$type': typeof CallFormTypeRoute
   '/pickup/form/$method': typeof PickupFormMethodRoute
 }
 export interface FileRoutesByTo {
@@ -182,6 +196,7 @@ export interface FileRoutesByTo {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/method': typeof CallMethodRoute
   '/login/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -189,6 +204,7 @@ export interface FileRoutesByTo {
   '/pickup/select': typeof PickupSelectRoute
   '/pickup/waiting': typeof PickupWaitingRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
+  '/call/form/$type': typeof CallFormTypeRoute
   '/pickup/form/$method': typeof PickupFormMethodRoute
 }
 export interface FileRoutesById {
@@ -207,6 +223,7 @@ export interface FileRoutesById {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/method': typeof CallMethodRoute
   '/login_/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -214,6 +231,7 @@ export interface FileRoutesById {
   '/pickup/select': typeof PickupSelectRoute
   '/pickup/waiting': typeof PickupWaitingRoute
   '/settings/accessibility': typeof SettingsAccessibilityRoute
+  '/call/form/$type': typeof CallFormTypeRoute
   '/pickup/form/$method': typeof PickupFormMethodRoute
 }
 export interface FileRouteTypes {
@@ -233,6 +251,7 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/method'
     | '/login/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -240,6 +259,7 @@ export interface FileRouteTypes {
     | '/pickup/select'
     | '/pickup/waiting'
     | '/settings/accessibility'
+    | '/call/form/$type'
     | '/pickup/form/$method'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -257,6 +277,7 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/method'
     | '/login/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -264,6 +285,7 @@ export interface FileRouteTypes {
     | '/pickup/select'
     | '/pickup/waiting'
     | '/settings/accessibility'
+    | '/call/form/$type'
     | '/pickup/form/$method'
   id:
     | '__root__'
@@ -281,6 +303,7 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/method'
     | '/login_/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -288,6 +311,7 @@ export interface FileRouteTypes {
     | '/pickup/select'
     | '/pickup/waiting'
     | '/settings/accessibility'
+    | '/call/form/$type'
     | '/pickup/form/$method'
   fileRoutesById: FileRoutesById
 }
@@ -306,12 +330,14 @@ export interface RootRouteChildren {
   SchoolRoute: typeof SchoolRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   TrustedPickupRoute: typeof TrustedPickupRoute
+  CallMethodRoute: typeof CallMethodRoute
   LoginPinRoute: typeof LoginPinRoute
   PickupCompleteRoute: typeof PickupCompleteRoute
   PickupMethodRoute: typeof PickupMethodRoute
   PickupPreviewRoute: typeof PickupPreviewRoute
   PickupSelectRoute: typeof PickupSelectRoute
   PickupWaitingRoute: typeof PickupWaitingRoute
+  CallFormTypeRoute: typeof CallFormTypeRoute
   PickupFormMethodRoute: typeof PickupFormMethodRoute
 }
 
@@ -415,6 +441,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrustedPickupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/call/method': {
+      id: '/call/method'
+      path: '/call/method'
+      fullPath: '/call/method'
+      preLoaderRoute: typeof CallMethodRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login_/pin': {
       id: '/login_/pin'
       path: '/login/pin'
@@ -464,6 +497,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsAccessibilityRouteImport
       parentRoute: typeof SettingsRoute
     }
+    '/call/form/$type': {
+      id: '/call/form/$type'
+      path: '/call/form/$type'
+      fullPath: '/call/form/$type'
+      preLoaderRoute: typeof CallFormTypeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pickup/form/$method': {
       id: '/pickup/form/$method'
       path: '/pickup/form/$method'
@@ -501,12 +541,14 @@ const rootRouteChildren: RootRouteChildren = {
   SchoolRoute: SchoolRoute,
   SettingsRoute: SettingsRouteWithChildren,
   TrustedPickupRoute: TrustedPickupRoute,
+  CallMethodRoute: CallMethodRoute,
   LoginPinRoute: LoginPinRoute,
   PickupCompleteRoute: PickupCompleteRoute,
   PickupMethodRoute: PickupMethodRoute,
   PickupPreviewRoute: PickupPreviewRoute,
   PickupSelectRoute: PickupSelectRoute,
   PickupWaitingRoute: PickupWaitingRoute,
+  CallFormTypeRoute: CallFormTypeRoute,
   PickupFormMethodRoute: PickupFormMethodRoute,
 }
 export const routeTree = rootRouteImport

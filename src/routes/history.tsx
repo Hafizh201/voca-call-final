@@ -6,16 +6,17 @@ import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { IconBadge, Chip } from "@/components/common/Section";
 import { EmptyState } from "@/components/feedback/EmptyState";
-import { History as HistoryIcon, Search, X, RefreshCw } from "lucide-react";
+import { History as HistoryIcon, Search, X, RefreshCw, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { fetchPickupHistory, type PickupHistoryItem } from "@/lib/pickup/history";
+import { Drawer as DrawerPrimitive } from "vaul";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Carousel,
+  type CarouselApi,
+  CarouselContent,
+  CarouselItem,
+} from "@/components/ui/carousel";
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -29,53 +30,70 @@ export const Route = createFileRoute("/history")({
   component: HistoryPage,
 });
 
-const FILTERS = ["Semua", "Hari ini", "Minggu ini", "Bulan ini"] as const;
-type Filter = (typeof FILTERS)[number];
+const TIME_FILTERS = ["Semua", "Hari ini", "Minggu ini"] as const;
+type TimeFilter = (typeof TIME_FILTERS)[number];
 
-function matchesFilter(item: PickupHistoryItem, filter: Filter) {
+const METHOD_FILTERS = ["Semua", "Jemput Sendiri", "Diwakilkan", "Ojek Online"] as const;
+type MethodFilter = (typeof METHOD_FILTERS)[number];
+
+/** Pecah nama_siswa (dipisah koma) menjadi daftar nama per baris. */
+function splitNames(student: string): string[] {
+  if (!student || student === "-") return [];
+  return student
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function matchesTime(item: PickupHistoryItem, filter: TimeFilter) {
   if (filter === "Semua") return true;
-  const now = new Date();
-  const d = parseDate(item.date);
-  if (!d) return true;
+  const now = Date.now();
   if (filter === "Hari ini") {
-    return d.toDateString() === now.toDateString();
+    const d = new Date(item.ts);
+    const today = new Date(now);
+    return (
+      d.getFullYear() === today.getFullYear() &&
+      d.getMonth() === today.getMonth() &&
+      d.getDate() === today.getDate()
+    );
   }
   if (filter === "Minggu ini") {
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
-    return d >= start;
-  }
-  if (filter === "Bulan ini") {
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    // Jendela 7 hari ke belakang dari sekarang (rolling window).
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    return item.ts >= weekAgo && item.ts <= now;
   }
   return true;
 }
 
-/** Coba parse tanggal dalam format id-ID (mis. "Senin, 6 Januari 2025"). */
-function parseDate(dateStr: string): Date | null {
-  if (!dateStr || dateStr === "-") return null;
-  const parts = dateStr.split(",");
-  if (parts.length < 2) return null;
-  const map: Record<string, number> = {
-    Januari: 0, Februari: 1, Maret: 2, April: 3, Mei: 4, Juni: 5,
-    Juli: 6, Agustus: 7, September: 8, Oktober: 9, November: 10, Desember: 11,
-  };
-  const m = parts[1].trim().match(/(\d+)\s+([A-Za-z]+)\s+(\d{4})/);
-  if (!m) return null;
-  const day = Number(m[1]);
-  const month = map[m[2]];
-  const year = Number(m[3]);
-  if (month === undefined || isNaN(day) || isNaN(year)) return null;
-  return new Date(year, month, day);
+function matchesMethod(item: PickupHistoryItem, filter: MethodFilter) {
+  if (filter === "Semua") return true;
+  return item.method === filter;
 }
 
 function HistoryPage() {
   const ready = usePageReady();
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<Filter>("Semua");
+  const [methodFilter, setMethodFilter] = useState<MethodFilter>("Semua");
   const [detail, setDetail] = useState<PickupHistoryItem | null>(null);
   const [items, setItems] = useState<PickupHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Carousel (waktu) — swipe untuk ganti filter
+  const [api, setApi] = useState<CarouselApi>();
+  const [timeIndex, setTimeIndex] = useState(0);
+  const timeFilter = TIME_FILTERS[timeIndex];
+
+  useEffect(() => {
+    if (!api) return;
+    const onSelect = () => setTimeIndex(api.selectedScrollSnap());
+    onSelect();
+    api.on("select", onSelect);
+    api.on("reInit", onSelect);
+    return () => {
+      api.off("select", onSelect);
+      api.off("reInit", onSelect);
+    };
+  }, [api]);
 
   async function load() {
     setLoading(true);
@@ -93,7 +111,8 @@ function HistoryPage() {
   const term = q.trim().toLowerCase();
   const list = items.filter(
     (p) =>
-      matchesFilter(p, filter) &&
+      matchesTime(p, timeFilter) &&
+      matchesMethod(p, methodFilter) &&
       (term === "" ||
         p.student.toLowerCase().includes(term) ||
         p.date.toLowerCase().includes(term) ||
@@ -132,23 +151,53 @@ function HistoryPage() {
             </button>
           )}
         </div>
-        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar">
-          {FILTERS.map((t) => (
+
+        {/* Filter waktu — carousel swipe */}
+        <div className="mt-4">
+          <Carousel setApi={setApi} className="w-full" opts={{ align: "start", dragFree: true }}>
+            <CarouselContent className="-ml-2">
+              {TIME_FILTERS.map((t, i) => (
+                <CarouselItem key={t} className="basis-auto pl-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      api?.scrollTo(i);
+                      setTimeIndex(i);
+                    }}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition active:scale-95",
+                      timeFilter === t
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-surface text-foreground",
+                    )}
+                  >
+                    {t}
+                  </button>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+          </Carousel>
+        </div>
+
+        {/* Filter metode penjemputan */}
+        <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar">
+          {METHOD_FILTERS.map((m) => (
             <button
-              key={t}
+              key={m}
               type="button"
-              onClick={() => setFilter(t)}
+              onClick={() => setMethodFilter(m)}
               className={cn(
                 "shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition active:scale-95",
-                filter === t
+                methodFilter === m
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-surface text-foreground",
               )}
             >
-              {t}
+              {m}
             </button>
           ))}
         </div>
+
         <div className="mt-4 space-y-2">
           {loading ? (
             <EmptyState
@@ -160,7 +209,7 @@ function HistoryPage() {
             <EmptyState
               icon={<HistoryIcon className="h-6 w-6" />}
               title="Tidak ada riwayat"
-              body="Coba ubah kata kunci pencarian atau filter tanggal."
+              body="Coba ubah kata kunci pencarian atau filter."
             />
           ) : (
             list.map((p) => (
@@ -174,11 +223,26 @@ function HistoryPage() {
                   <HistoryIcon className="h-5 w-5" />
                 </IconBadge>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-ink">
-                    {p.student} · {p.method}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {p.date} · {p.time}
+                  {/* Nama siswa ber-shaf: 1 nama per baris */}
+                  {splitNames(p.student).length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {splitNames(p.student).map((name, i) => (
+                        <li
+                          key={i}
+                          className="flex items-center gap-1.5 text-sm font-semibold text-ink"
+                        >
+                          <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary/10 text-primary">
+                            <Users className="h-2.5 w-2.5" />
+                          </span>
+                          <span className="truncate">{name}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="truncate text-sm font-semibold text-ink">{p.student}</p>
+                  )}
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    {p.method} · {p.date} · {p.time}
                   </p>
                 </div>
                 <Chip tone={p.status === "Selesai" ? "success" : "warning"}>{p.status}</Chip>
@@ -188,31 +252,56 @@ function HistoryPage() {
         </div>
       </div>
 
-      <Sheet open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
-        <SheetContent side="bottom" className="rounded-t-3xl">
-          <SheetHeader>
-            <SheetTitle>Detail Penjemputan</SheetTitle>
-          </SheetHeader>
-          {detail && (
-            <dl className="mt-2 divide-y divide-border px-1 pb-6">
-              {[
-                ["Siswa", detail.student],
-                ["Metode", detail.method],
-                ["Tanggal", detail.date],
-                ["Waktu", detail.time],
-                ["Status", detail.status],
-              ].map(([k, v]) => (
-                <div key={k} className="flex items-center justify-between gap-3 py-2.5">
-                  <dt className="text-xs font-semibold text-muted-foreground">{k}</dt>
-                  <dd className="text-sm font-medium text-ink">{v}</dd>
+      <DrawerPrimitive.Root open={detail !== null} onOpenChange={(o) => !o && setDetail(null)}>
+        <DrawerPrimitive.Portal>
+          <DrawerPrimitive.Overlay className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-[2px]" onClick={() => setDetail(null)} />
+          <DrawerPrimitive.Content className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-h-[70vh] w-full max-w-[480px] flex-col rounded-t-3xl border border-border bg-surface shadow-card focus:outline-none">
+            <DrawerPrimitive.Handle className="mx-auto mt-3 h-1.5 w-10 rounded-full bg-border" />
+            <div className="px-5 pb-2 pt-2">
+              <h2 className="font-display text-base font-bold text-ink">Detail Penjemputan</h2>
+            </div>
+            {detail && (
+              <dl className="min-h-0 flex-1 divide-y divide-border overflow-y-auto px-5 pb-6">
+                <div className="flex items-start justify-between gap-3 py-2.5">
+                  <dt className="mt-0.5 text-xs font-semibold text-muted-foreground">Siswa</dt>
+                  <dd className="flex-1 text-right">
+                    {splitNames(detail.student).length > 0 ? (
+                      <ul className="space-y-1">
+                        {splitNames(detail.student).map((name, i) => (
+                          <li
+                            key={i}
+                            className="flex items-center justify-end gap-1.5 text-sm font-medium text-ink"
+                          >
+                            <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <Users className="h-3 w-3" />
+                            </span>
+                            {name}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span className="text-sm font-medium text-ink">{detail.student}</span>
+                    )}
+                  </dd>
                 </div>
-              ))}
-            </dl>
-          )}
-        </SheetContent>
-      </Sheet>
+                {[
+                  ["Metode", detail.method],
+                  ["Tanggal", detail.date],
+                  ["Waktu", detail.time],
+                  ["Status", detail.status],
+                ].map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between gap-3 py-2.5">
+                    <dt className="text-xs font-semibold text-muted-foreground">{k}</dt>
+                    <dd className="text-sm font-medium text-ink">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </DrawerPrimitive.Content>
+        </DrawerPrimitive.Portal>
+      </DrawerPrimitive.Root>
 
       <BottomNav />
     </PhoneShell>
-  );
+);
 }
