@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { announcements, tips } from "@/lib/dummy/data";
+import { tips } from "@/lib/dummy/data";
 import { useEffect, useState } from "react";
 import { IconBadge } from "@/components/common/Section";
 import { Megaphone, Lightbulb, Clock3, ShieldCheck, History as HistoryIcon, Users, ChevronRight } from "lucide-react";
 import { fetchPickupHistory, type PickupHistoryItem } from "@/lib/pickup/history";
+import { fetchAnnouncements, formatAnnouncementTime, type Announcement } from "@/lib/announcement";
 import { Drawer as DrawerPrimitive } from "vaul";
 
 /** Pecah nama_siswa (dipisah koma) menjadi daftar nama per baris. */
@@ -16,21 +17,92 @@ function splitNames(student: string): string[] {
 }
 
 export function AnnouncementList() {
+  const [items, setItems] = useState<Announcement[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchAnnouncements()
+      .then((data) => {
+        if (!active) return;
+        setItems(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="space-y-3 px-5">
+        {[0, 1].map((i) => (
+          <div key={i} className="rounded-3xl border border-border/60 bg-surface p-4 shadow-card">
+            <div className="flex items-start gap-3">
+              <IconBadge tone="muted"><Megaphone className="h-5 w-5 animate-pulse" /></IconBadge>
+              <div className="flex-1 space-y-2">
+                <div className="h-3 w-1/3 animate-pulse rounded-full bg-surface-2" />
+                <div className="h-3 w-2/3 animate-pulse rounded-full bg-surface-2" />
+                <div className="h-2.5 w-1/2 animate-pulse rounded-full bg-surface-2" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+if (items.length === 0) {
+    return (
+      <div className="relative mx-5 overflow-hidden rounded-3xl border border-primary/20 bg-surface p-6 shadow-card">
+        {/* dekorasi glow biru senada theme */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-primary/10 blur-3xl"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-primary/5 blur-3xl"
+        />
+        <div className="relative flex flex-col items-center gap-3 text-center">
+          <span className="grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-elevated">
+            <Megaphone className="h-6 w-6" />
+          </span>
+          <div>
+            <h3 className="font-display text-sm font-bold text-ink">
+              Belum ada pengumuman dari sekolah
+            </h3>
+            <p className="mx-auto mt-1 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
+              Kami akan menyampaikan informasi terbaru melalui halaman ini.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3 px-5">
-      {announcements.map((a) => (
+      {items.map((a) => (
         <article key={a.id} className="rounded-3xl border border-border/60 bg-surface p-4 shadow-card">
           <div className="flex items-start gap-3">
             <IconBadge tone="warm">
               <Megaphone className="h-5 w-5" />
             </IconBadge>
             <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground">{a.tag}</span>
-                <span className="text-[10px] text-muted-foreground">{a.time}</span>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground">Pengumuman</span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {formatAnnouncementTime(a.createdAt)}
+                </span>
               </div>
-              <h3 className="mt-1 font-display text-sm font-bold text-ink">{a.title}</h3>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.body}</p>
+              <h3 className="mt-1 font-display text-sm font-bold text-ink">{a.judul}</h3>
+              {a.isi ? (
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{a.isi}</p>
+              ) : null}
             </div>
           </div>
         </article>

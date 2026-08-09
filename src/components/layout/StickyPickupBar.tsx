@@ -2,8 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useActivePickup, useStudentStatus, STAGE_LABELS } from "@/lib/state/stores";
 import { useStudentsCache } from "@/lib/students";
-import { Radio, GraduationCap } from "lucide-react";
+import { Radio, GraduationCap, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const COOLDOWN_MS = 180_000;
 
 export function StickyPickupBar() {
   const { current } = useActivePickup();
@@ -31,10 +33,18 @@ export function StickyPickupBar() {
   // Gunakan label dari STAGE_LABELS agar selalu mengikuti status terkini (tidak dari timeline yang tersimpan).
   const statusLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
 
-  // Semua siswa yang sedang dipanggil (real-time dari store).
+// Semua siswa yang sedang dipanggil (real-time dari store).
   const calledStudents = students.filter((s) => current.studentIds.includes(s.id));
   const firstStudentId = current.studentIds[0];
   const callCount = studentStatus[firstStudentId]?.callCount ?? current.callCount;
+
+  // Cooldown panggil ulang — tetap bertahan walau kembali ke beranda (nilai dari store).
+  const inCooldown = current.cooldownStartedAt !== null;
+  const startedAt = current.cooldownStartedAt ?? Date.now();
+  const remaining = inCooldown ? Math.max(0, COOLDOWN_MS - (Date.now() - startedAt)) : COOLDOWN_MS;
+  const canRecall = inCooldown && remaining === 0;
+  const remainingMinutes = Math.floor(remaining / 60000);
+  const remainingSeconds = Math.floor((remaining % 60000) / 1000);
 
   return (
     <div
@@ -73,9 +83,19 @@ export function StickyPickupBar() {
             </p>
           )}
 
-          <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/70 ">
-            Sudah dipanggil {callCount}&times;
-          </p>
+{canRecall ? (
+            <p className="mt-1 flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-white">
+              <RefreshCw className="h-3.5 w-3.5" /> Sudah bisa panggil ulang
+            </p>
+          ) : inCooldown ? (
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/70">
+              Panggil ulang dalam {remainingMinutes}:{remainingSeconds.toString().padStart(2, "0")}
+            </p>
+          ) : (
+            <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-white/70 ">
+              Sudah dipanggil {callCount}&times;
+            </p>
+          )}
         </div>
         <span className="shrink-0 rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold">Lihat</span>
       </Link>

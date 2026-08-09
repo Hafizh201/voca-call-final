@@ -32,7 +32,7 @@ export function subscribeCctv(fn: () => void) {
   return () => cctvListeners.delete(fn);
 }
 
-function pushCctv(entry: Omit<CctvLogEntry, "id" | "ts">) {
+export function pushCctv(entry: Omit<CctvLogEntry, "id" | "ts">) {
   const full: CctvLogEntry = {
     ...entry,
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -111,7 +111,7 @@ function numericId(): number {
  * Karena Supabase menyimpan `timestamp with time zone` ((dikonversi ke UTC),
  * kita kirim nilai yang sudah eksplisit +07:00 agar tampil benar di dashboard.
  */
-function toWib(ts?: number): string {
+export function toWib(ts?: number): string {
   const d = ts ? new Date(ts) : new Date();
   // Konversi ke WIB lalu seri lainkan dengan offset +07:00
   const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
@@ -149,9 +149,12 @@ function buildPayload(req: PickupRequest, idWali: string | null) {
     catatan_p: req.note?.trim() || null,
     short_messg: req.announcement || null,
     method: req.method,
-    jumlah_pemanggilan: req.callCount,
+jumlah_pemanggilan: req.callCount,
     kata_panggilan: req.announcement || null,
     done: false,
+    // id_jenis_pemanggilan dari tabel `type_panggil`:
+    //   1=self, 2=other, 3=ojek, 4=ditunggu, 5=titipan
+    id_jenis_pemanggilan: req.method === "self" ? 1 : req.method === "other" ? 2 : 3,
   };
 
   if (req.method === "other") {
@@ -421,3 +424,4 @@ function persistIdPemanggilan(req: PickupRequest, idPemanggilan: string) {
     });
   });
 }
+
