@@ -23,7 +23,10 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as SchoolRouteImport } from './routes/school'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as TrustedPickupRouteImport } from './routes/trusted-pickup'
+import { Route as CallCompleteRouteImport } from './routes/call.complete'
 import { Route as CallMethodRouteImport } from './routes/call.method'
+import { Route as CallMonitoringRouteImport } from './routes/call.monitoring'
+import { Route as CallSelectRouteImport } from './routes/call.select'
 import { Route as LoginPinRouteImport } from './routes/login_.pin'
 import { Route as PickupCompleteRouteImport } from './routes/pickup.complete'
 import { Route as PickupMethodRouteImport } from './routes/pickup.method'
@@ -104,9 +107,24 @@ const TrustedPickupRoute = TrustedPickupRouteImport.update({
   path: '/trusted-pickup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallCompleteRoute = CallCompleteRouteImport.update({
+  id: '/call/complete',
+  path: '/call/complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CallMethodRoute = CallMethodRouteImport.update({
   id: '/call/method',
   path: '/call/method',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallMonitoringRoute = CallMonitoringRouteImport.update({
+  id: '/call/monitoring',
+  path: '/call/monitoring',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallSelectRoute = CallSelectRouteImport.update({
+  id: '/call/select',
+  path: '/call/select',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginPinRoute = LoginPinRouteImport.update({
@@ -170,7 +188,10 @@ export interface FileRoutesByFullPath {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/complete': typeof CallCompleteRoute
   '/call/method': typeof CallMethodRoute
+  '/call/monitoring': typeof CallMonitoringRoute
+  '/call/select': typeof CallSelectRoute
   '/login/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -196,7 +217,10 @@ export interface FileRoutesByTo {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/complete': typeof CallCompleteRoute
   '/call/method': typeof CallMethodRoute
+  '/call/monitoring': typeof CallMonitoringRoute
+  '/call/select': typeof CallSelectRoute
   '/login/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -223,7 +247,10 @@ export interface FileRoutesById {
   '/school': typeof SchoolRoute
   '/settings': typeof SettingsRouteWithChildren
   '/trusted-pickup': typeof TrustedPickupRoute
+  '/call/complete': typeof CallCompleteRoute
   '/call/method': typeof CallMethodRoute
+  '/call/monitoring': typeof CallMonitoringRoute
+  '/call/select': typeof CallSelectRoute
   '/login_/pin': typeof LoginPinRoute
   '/pickup/complete': typeof PickupCompleteRoute
   '/pickup/method': typeof PickupMethodRoute
@@ -251,7 +278,10 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/complete'
     | '/call/method'
+    | '/call/monitoring'
+    | '/call/select'
     | '/login/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -277,7 +307,10 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/complete'
     | '/call/method'
+    | '/call/monitoring'
+    | '/call/select'
     | '/login/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -303,7 +336,10 @@ export interface FileRouteTypes {
     | '/school'
     | '/settings'
     | '/trusted-pickup'
+    | '/call/complete'
     | '/call/method'
+    | '/call/monitoring'
+    | '/call/select'
     | '/login_/pin'
     | '/pickup/complete'
     | '/pickup/method'
@@ -330,7 +366,10 @@ export interface RootRouteChildren {
   SchoolRoute: typeof SchoolRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   TrustedPickupRoute: typeof TrustedPickupRoute
+  CallCompleteRoute: typeof CallCompleteRoute
   CallMethodRoute: typeof CallMethodRoute
+  CallMonitoringRoute: typeof CallMonitoringRoute
+  CallSelectRoute: typeof CallSelectRoute
   LoginPinRoute: typeof LoginPinRoute
   PickupCompleteRoute: typeof PickupCompleteRoute
   PickupMethodRoute: typeof PickupMethodRoute
@@ -441,11 +480,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrustedPickupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/call/complete': {
+      id: '/call/complete'
+      path: '/call/complete'
+      fullPath: '/call/complete'
+      preLoaderRoute: typeof CallCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/call/method': {
       id: '/call/method'
       path: '/call/method'
       fullPath: '/call/method'
       preLoaderRoute: typeof CallMethodRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/call/monitoring': {
+      id: '/call/monitoring'
+      path: '/call/monitoring'
+      fullPath: '/call/monitoring'
+      preLoaderRoute: typeof CallMonitoringRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/call/select': {
+      id: '/call/select'
+      path: '/call/select'
+      fullPath: '/call/select'
+      preLoaderRoute: typeof CallSelectRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login_/pin': {
@@ -541,7 +601,10 @@ const rootRouteChildren: RootRouteChildren = {
   SchoolRoute: SchoolRoute,
   SettingsRoute: SettingsRouteWithChildren,
   TrustedPickupRoute: TrustedPickupRoute,
+  CallCompleteRoute: CallCompleteRoute,
   CallMethodRoute: CallMethodRoute,
+  CallMonitoringRoute: CallMonitoringRoute,
+  CallSelectRoute: CallSelectRoute,
   LoginPinRoute: LoginPinRoute,
   PickupCompleteRoute: PickupCompleteRoute,
   PickupMethodRoute: PickupMethodRoute,

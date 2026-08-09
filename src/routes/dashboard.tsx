@@ -5,12 +5,20 @@ import { useEffect, useState } from "react";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { StickyPickupBar } from "@/components/layout/StickyPickupBar";
+import { StickyCallBar } from "@/components/layout/StickyCallBar";
 import { OfflineBanner } from "@/components/feedback/OfflineBanner";
 import { StudentHeroCard } from "@/components/cards/StudentHeroCard";
 import { AnnouncementList, TipsCard, RecentPickupsCard, SystemStatusCard } from "@/components/cards/DashboardCards";
 import { SectionHeader, Chip } from "@/components/common/Section";
 import { BigButton } from "@/components/common/BigButton";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { contacts } from "@/lib/dummy/data";
 import { useSession, useActivePickup } from "@/lib/state/stores";
 import { useStudents } from "@/lib/students";
@@ -83,6 +91,7 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
 
 <OfflineBanner />
       <StickyPickupBar />
+      <StickyCallBar />
 
 {active.length > 0 && (
         <div className="mt-5">
@@ -216,7 +225,7 @@ return (
 function CallStatusCard() {
   const { current } = useActiveCall();
   const { students } = useStudentsForCall();
-  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
 
   if (!current || current.done) return null;
 
@@ -226,9 +235,12 @@ function CallStatusCard() {
     .join(", ");
 
 const isTitipan = current.type === "titipan";
-  const detail = isTitipan ? `Titipan untuk ${names}` : `${names} ditunggu menunggumu`;
+  const detail = isTitipan ? `Titipan untuk ${names}` : `${names} sedang ditunggu`;
+  const takenText = current.taken ? "Titipan sudah diambil" : "Titipan belum diambil";
+  const p = current.payload;
 
   return (
+    <>
     <div className="mx-5 mt-4">
       <div className="flex items-start gap-3 rounded-3xl border border-border bg-surface p-4 shadow-card">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
@@ -239,10 +251,13 @@ const isTitipan = current.type === "titipan";
             {isTitipan ? "Panggilan Titipan Aktif" : "Panggilan Ditunggu Aktif"}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground">{detail}</p>
+          {isTitipan && (
+            <p className="mt-1 text-[11px] font-bold text-primary">{takenText}</p>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => nav({ to: "/monitoring" })}
+              onClick={() => setOpen(true)}
               className="rounded-full bg-primary px-3 py-1.5 text-[11px] font-bold text-primary-foreground shadow-card active:scale-95"
             >
               Lihat Status
@@ -257,6 +272,56 @@ const isTitipan = current.type === "titipan";
           </div>
         </div>
       </div>
+    </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[92vw] rounded-3xl sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-display text-base font-bold text-ink">
+              {isTitipan ? "Status Titipan" : "Status Panggilan"}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">{detail}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 rounded-2xl border border-border bg-surface-2/60 p-4 text-xs">
+            <Row label="Siswa" value={names || "—"} />
+            {isTitipan && p.type === "titipan" ? (
+              <>
+                <Row label="Penitip" value={p.namaPenitip} />
+                <Row label="Jenis titipan" value={p.jenisTitipan} />
+              </>
+            ) : p.type === "ditunggu" ? (
+              <>
+                <Row label="Ditunggu oleh" value={p.ditungguOleh} />
+                <Row label="Posisi tunggu" value={p.posisiTunggu} />
+              </>
+            ) : null}
+            {p.shortMessg ? <Row label="Pesan singkat" value={p.shortMessg} /> : null}
+          </div>
+
+          <p className="text-center font-display text-sm font-bold text-ink">
+            {isTitipan ? takenText : current.done ? "Panggilan selesai" : "Panggilan masih berlangsung"}
+          </p>
+
+          <BigButton
+            onClick={() => {
+              completeCall(current.id);
+              setOpen(false);
+            }}
+          >
+            {isTitipan ? "Tandai sudah diambil" : "Tandai selesai"}
+          </BigButton>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="max-w-[60%] text-right font-semibold text-ink">{value}</span>
     </div>
   );
 }

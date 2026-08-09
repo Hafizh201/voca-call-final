@@ -22,6 +22,7 @@ export type CallKindPayload =
       ditungguOleh: string;
       posisiTunggu: string;
       shortMessg: string;
+      method: string;
     }
   | {
       type: "titipan";
@@ -29,6 +30,7 @@ export type CallKindPayload =
       namaPenitip: string;
       jenisTitipan: string;
       shortMessg: string;
+      method: string;
     };
 
 export type ActiveCall = {
