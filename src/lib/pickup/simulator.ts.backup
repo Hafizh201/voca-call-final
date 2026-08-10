@@ -9,15 +9,6 @@ import {
 import { nowHHmm } from "../format/utils";
 import { getStudents } from "../students";
 import { insertPickupHistory, updatePickupCallCount, markPickupDone } from "./history";
-import { persistRecall, type RecallSourceTable } from "@/lib/recall";
-import { notify } from "@/lib/state/notificationStore";
-
-function studentNames(studentIds: string[]) {
-  return studentIds
-    .map((id) => getStudents().find((student) => student.id === id)?.name)
-    .filter(Boolean)
-    .join(", ");
-}
 
 export function buildAnnouncement(
   req: Pick<PickupRequest, "studentIds" | "method" | "pickerName"> &
@@ -87,12 +78,10 @@ function makeQrCode() {
 }
 
 export function submitPickup(input: Omit<PickupRequest, "id" | "createdAt" | "stage" | "timeline" | "announcement" | "cooldownStartedAt" | "secondCallExtras" | "callCount">) {
-  const idPemanggilan = String(Date.now());
   const id = `req-${Date.now()}`;
   const req: PickupRequest = {
     ...input,
     id,
-    idPemanggilan,
     createdAt: Date.now(),
     stage: "received",
     timeline: [{ at: nowHHmm(), label: LABELS.received, stage: "received" }],
@@ -103,7 +92,6 @@ export function submitPickup(input: Omit<PickupRequest, "id" | "createdAt" | "st
     callCount: 1,
   };
 pickupStore.set({ current: req, history: pickupStore.get().history });
-  notify("Pemanggilan penjemputan dikirim", studentNames(req.studentIds) || "Permintaan penjemputan sedang diproses.", "success");
   markStudentCalled(req.studentIds, req.callCount);
   // Simpan riwayat ke Supabase (fire & forget — tidak menghentikan alur utama).
   void insertPickupHistory(req);
@@ -125,7 +113,6 @@ export function finishAndArchive() {
   markStudentPickedUp(s.current.studentIds);
   // Tandai selesai di riwayat Supabase (fire & forget).
   void markPickupDone(s.current);
-  notify("Penjemputan selesai", studentNames(s.current.studentIds) || "Penjemputan telah disimpan ke riwayat.", "success");
   pickupStore.set({
     current: null,
     history: [{ ...s.current, stage: "done" as PickupStage }, ...s.history].slice(0, 20),
@@ -157,14 +144,11 @@ export function forceStopActivePickup() {
   });
 }
 
-export async function triggerSecondCall(extras: string[]) {
+export function triggerSecondCall(extras: string[]) {
   const s = pickupStore.get();
   if (!s.current) return;
   const req = s.current;
-  if (!req.idPemanggilan) throw new Error("ID pemanggilan belum tersedia untuk recall.");
-  const sourceTable: RecallSourceTable = `panggil_${req.method}`;
-  const recall = await persistRecall(sourceTable, req.idPemanggilan);
-  const nextCount = recall.pemanggilanKe;
+  const nextCount = req.callCount + 1;
   const extraSentence = extras.length ? " " + extras.join(" ") : "";
   const updated = {
     ...req,
@@ -179,9 +163,8 @@ export async function triggerSecondCall(extras: string[]) {
     ],
   };
 pickupStore.set({ current: updated });
-  notify(`Pemanggilan ulang ke-${nextCount} dikirim`, studentNames(req.studentIds) || "Panggilan ulang sedang diumumkan.", "success");
   markStudentCalled(req.studentIds, nextCount);
-  // Recall sudah tersimpan; sinkronkan penghitung pada row asal.
+  // Perbarui jumlah_pemanggilan di Supabase pada row yang sama (bukan insert baru).
   void updatePickupCallCount(updated);
   // simulate short queued -> announcing -> cooldown
   setTimeout(() => {

@@ -7,16 +7,13 @@ import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   useNotifications,
-  toggleNotificationRead,
   markAllNotificationsRead,
   clearNotifications,
-  dismissNotification,
 } from "@/lib/state/notificationStore";
-import { SwipeableNotificationItem } from "@/components/notifications/SwipeableNotificationItem";
+import { NotificationInboxItem } from "@/components/notifications/NotificationsFloating";
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -90,7 +87,6 @@ function Notifs() {
               disabled={unread === 0}
               onClick={() => {
                 markAllNotificationsRead();
-                toast.success("Semua notifikasi ditandai terbaca");
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-foreground transition active:scale-95 disabled:opacity-50"
             >
@@ -100,7 +96,6 @@ function Notifs() {
               type="button"
               onClick={() => {
                 clearNotifications();
-                toast.success("Notifikasi dibersihkan");
               }}
               className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-border bg-surface px-3 py-2.5 text-xs font-semibold text-destructive transition active:scale-95"
             >
@@ -132,18 +127,10 @@ function Notifs() {
         ) : (
           <div className="space-y-2">
             {items.map((n) => (
-              <SwipeableNotificationItem
-                key={n.id}
-                notification={n}
-                onDismiss={() => {
-                  dismissNotification(n.id);
-                  toast.success("Notifikasi dihapus");
-                }}
-                onToggleRead={() => toggleNotificationRead(n.id)}
-              />
+              <NotificationInboxItem key={n.id} notification={n} />
             ))}
             <p className="py-2 text-center text-[10px] text-muted-foreground">
-              Geser notifikasi ke kiri atau tekan × untuk menghapus
+              Ketuk notifikasi untuk menandainya sudah atau belum dibaca
             </p>
           </div>
         )}

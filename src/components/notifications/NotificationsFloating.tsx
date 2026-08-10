@@ -1,16 +1,78 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Bell, CheckCheck, Inbox, Mail, X } from "lucide-react";
+import { Bell, Check, CheckCheck, Inbox, Mail, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useNotifications,
-  dismissNotification,
+  markNotificationRead,
   markAllNotificationsRead,
-  toggleNotificationRead,
 } from "@/lib/state/notificationStore";
-import { SwipeableNotificationItem } from "./SwipeableNotificationItem";
+import type { AppNotification } from "@/lib/state/notificationStore";
 
 type Filter = "semua" | "belum";
+
+const READ_SWIPE_THRESHOLD = 72;
+
+/** Item inbox permanen: geser ke kiri hanya menandai sudah dibaca, tidak menghapusnya. */
+export function NotificationInboxItem({ notification, compact }: { notification: AppNotification; compact?: boolean }) {
+  const startX = useRef<number | null>(null);
+  const [offset, setOffset] = useState(0);
+
+  const markRead = () => {
+    if (!notification.read) markNotificationRead(notification.id);
+  };
+
+  const finishSwipe = () => {
+    const shouldMarkRead = offset <= -READ_SWIPE_THRESHOLD;
+    startX.current = null;
+    if (shouldMarkRead) markRead();
+    setOffset(0);
+  };
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl">
+      <div className="absolute inset-y-0 right-0 flex w-28 items-center justify-center bg-success/15 text-[10px] font-bold text-success-foreground">
+        <Check className="mr-1 h-3.5 w-3.5" /> Tandai dibaca
+      </div>
+      <button
+        type="button"
+        onClick={markRead}
+        onPointerDown={(event) => {
+          startX.current = event.clientX;
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerMove={(event) => {
+          if (startX.current === null) return;
+          const distance = event.clientX - startX.current;
+          if (distance < 0) setOffset(Math.max(distance, -READ_SWIPE_THRESHOLD - 28));
+        }}
+        onPointerUp={finishSwipe}
+        onPointerCancel={finishSwipe}
+        style={{ transform: `translateX(${offset}px)` }}
+        className={cn(
+          "relative flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left shadow-card transition-transform duration-200 ease-out active:scale-[0.99]",
+          notification.read
+            ? "border-border/60 bg-surface/70"
+            : "border-primary/20 bg-gradient-to-br from-primary/10 via-surface to-surface shadow-glow",
+        )}
+      >
+        {!compact && (
+          <span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-2xl", notification.read ? "bg-surface-2 text-muted-foreground" : "bg-gradient-to-br from-primary to-oklch(0.45 0.11 275) text-white shadow-glow")}>
+            <Bell className="h-4 w-4" />
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center justify-between gap-2">
+            <span className={cn("truncate font-display text-[13px]", notification.read ? "font-semibold text-muted-foreground" : "font-bold text-ink")}>{notification.title}</span>
+            {notification.read ? <Check className="h-3.5 w-3.5 shrink-0 text-success" /> : <span className="h-2 w-2 shrink-0 rounded-full bg-primary shadow-glow" />}
+          </span>
+          <span className="mt-0.5 block text-[11px] text-muted-foreground">{notification.body}</span>
+          <span className="mt-1 block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{notification.time}</span>
+        </span>
+      </button>
+    </div>
+  );
+}
 
 export function NotificationsFloating() {
   const [open, setOpen] = useState(false);
@@ -122,12 +184,7 @@ export function NotificationsFloating() {
             )}
             {items.map((n) => (
               <li key={n.id} className="py-1">
-                <SwipeableNotificationItem
-                  notification={n}
-                  compact
-                  onDismiss={() => dismissNotification(n.id)}
-                  onToggleRead={() => toggleNotificationRead(n.id)}
-                />
+                <NotificationInboxItem notification={n} compact />
               </li>
             ))}
           </ul>

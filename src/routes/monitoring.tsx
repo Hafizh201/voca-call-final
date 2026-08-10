@@ -26,7 +26,7 @@ MessageSquareText,
   X,
   Home,
 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 import { EmptyState } from "@/components/feedback/EmptyState";
 import { BigButton } from "@/components/common/BigButton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -206,7 +206,7 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
               <button
                 onClick={() => {
                   navigator.clipboard?.writeText(current.announcement);
-                  toast.success("Kalimat pemanggilan disalin");
+                  notify("Kalimat pemanggilan disalin", "Teks pemanggilan telah disalin ke clipboard.", "success");
                 }}
                 className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-[11px] font-semibold text-foreground transition active:scale-95"
               >
@@ -279,10 +279,14 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
                 <X className="h-4 w-4" /> Batal
               </BigButton>
               <BigButton
-                onClick={() => {
-                  triggerSecondCall(extras);
-                  setExtras([]);
-                  setOpen(false);
+                onClick={async () => {
+                  try {
+                    await triggerSecondCall(extras);
+                    setExtras([]);
+                    setOpen(false);
+                  } catch (error) {
+                    notify("Recall gagal disimpan", error instanceof Error ? error.message : "Recall gagal disimpan.", "error");
+                  }
                 }}
               >
                 Panggil sekarang
@@ -310,7 +314,6 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
         onConfirm={() => {
           setConfirmDone(false);
           finishAndArchive();
-          toast.success("Penjemputan selesai & disimpan ke riwayat");
           nav({ to: "/pickup/complete" });
         }}
       />

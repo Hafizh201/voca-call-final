@@ -108,8 +108,18 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { initRecallListener } from "@/lib/recallListener";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Initialize Supabase Realtime listener for recall table
+  // This acts as a CCTV system that continuously monitors for new recall records
+  // and triggers TTS when new recall data arrives
+  useEffect(() => {
+    const unsubscribe = initRecallListener();
+    return unsubscribe;
+  }, []);
 
 return (
     <QueryClientProvider client={queryClient}>

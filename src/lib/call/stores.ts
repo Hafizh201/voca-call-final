@@ -1,6 +1,16 @@
 import { useSyncExternalStore } from "react";
 import { createStore } from "@/lib/state/stores";
 import { insertCallHistory, updateCallCallCount, markCallDone, kataPanggilanFrom } from "@/lib/call/history";
+import { persistRecall, type RecallSourceTable } from "@/lib/recall";
+import { notify } from "@/lib/state/notificationStore";
+import { getStudents } from "@/lib/students";
+
+function studentNames(studentIds: string[]) {
+  return studentIds
+    .map((id) => getStudents().find((student) => student.id === id)?.name)
+    .filter(Boolean)
+    .join(", ");
+}
 
 /**
  * FITUR "PANGGIL" — DITUNGGU & AMBIL TITIPAN
@@ -64,6 +74,7 @@ export const useActiveCall = () =>
   useSyncExternalStore(callStore.subscribe, callStore.get, () => callInitial);
 
 export function createCall(payload: CallKindPayload): ActiveCall {
+  const idPemanggilan = String(Date.now());
   const id = `call-${Date.now()}`;
   const call: ActiveCall = {
     id,
@@ -85,11 +96,17 @@ export function createCall(payload: CallKindPayload): ActiveCall {
       callCount: 1,
       cooldownStartedAt: null,
     }),
+    idPemanggilan,
     callCount: 1,
     cooldownStartedAt: Date.now(),
   };
   const s = callStore.get();
   callStore.set({ current: call, history: [call, ...s.history].slice(0, 20) });
+  notify(
+    payload.type === "titipan" ? "Panggilan titipan dikirim" : "Panggilan ditunggu dikirim",
+    studentNames(call.studentIds) || "Panggilan telah dikirim ke sistem.",
+    "success",
+  );
   // Simpan riwayat ke Supabase (fire & forget — tidak menghentikan alur utama).
   void insertCallHistory(call);
   return call;
@@ -112,6 +129,11 @@ export function completeCall(id: string) {
         : c,
     ),
   });
+  notify(
+    updated.type === "titipan" ? "Titipan sudah diambil" : "Panggilan selesai",
+    studentNames(updated.studentIds) || "Status panggilan telah diperbarui.",
+    "success",
+  );
   // Tandai done di riwayat Supabase (fire & forget).
   void markCallDone(updated);
 }
@@ -135,11 +157,14 @@ export function completeAndStartCooldown() {
  * Recall / panggil ulang — menambah jumlah_pemanggilan, reset cooldown,
  * dan memperbarui kalimat bila ada tambahan `extras`.
  */
-export function triggerCallRecall(extras: string[] = []) {
+export async function triggerCallRecall(extras: string[] = []) {
   const s = callStore.get();
   if (!s.current) return;
   const call = s.current;
-  const nextCount = call.callCount + 1;
+  if (!call.idPemanggilan) throw new Error("ID pemanggilan belum tersedia untuk recall.");
+  const sourceTable: RecallSourceTable = call.type === "titipan" ? "panggil_titipan" : "panggil_ditunggu";
+  const recall = await persistRecall(sourceTable, call.idPemanggilan);
+  const nextCount = recall.pemanggilanKe;
   const extraSentence = extras.length ? " " + extras.join(" ") : "";
   const updated: ActiveCall = {
     ...call,
@@ -148,6 +173,7 @@ export function triggerCallRecall(extras: string[] = []) {
     announcement: call.announcement + extraSentence,
   };
   callStore.set({ current: updated });
-  // Perbarui jumlah_pemanggilan di Supabase pada row yang sama (bukan insert baru).
+  notify(`Panggilan ulang ke-${nextCount} dikirim`, studentNames(call.studentIds) || "Panggilan ulang sedang diumumkan.", "success");
+  // Recall sudah tersimpan; sinkronkan penghitung pada row asal.
   void updateCallCallCount(updated);
 }

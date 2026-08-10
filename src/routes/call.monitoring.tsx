@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/feedback/EmptyState";
 import { useStudents } from "@/lib/students";
 import { useActiveCall, completeCall, triggerCallRecall } from "@/lib/call/stores";
 import { PackageOpen, UserRoundCheck, Megaphone, Home, Copy, Radio, Check, X } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { secondCallOptions } from "@/lib/dummy/data";
 import { cn } from "@/lib/utils";
@@ -168,7 +168,7 @@ function CallMonitoringPage() {
               <button
                 onClick={() => {
                   navigator.clipboard?.writeText(current.announcement);
-                  toast.success("Kalimat pemanggilan disalin");
+                  notify("Kalimat pemanggilan disalin", "Teks pemanggilan telah disalin ke clipboard.", "success");
                 }}
                 className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-[11px] font-semibold text-foreground transition active:scale-95"
               >
@@ -229,11 +229,14 @@ function CallMonitoringPage() {
                 <X className="h-4 w-4" /> Batal
               </BigButton>
               <BigButton
-                onClick={() => {
-                  triggerCallRecall(extras);
-                  setExtras([]);
-                  setOpen(false);
-                  toast.success("Panggilan ulang dikirim");
+                onClick={async () => {
+                  try {
+                    await triggerCallRecall(extras);
+                    setExtras([]);
+                    setOpen(false);
+                  } catch (error) {
+                    notify("Recall gagal disimpan", error instanceof Error ? error.message : "Recall gagal disimpan.", "error");
+                  }
                 }}
               >
                 Panggil sekarang

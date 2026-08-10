@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { toast } from "sonner";
 import { createStore } from "./stores";
 import { notifications as seedNotifications } from "@/lib/dummy/data";
 
@@ -8,7 +9,6 @@ export type AppNotification = {
   body: string;
   time: string;
   read: boolean;
-  dismissed?: boolean;
 };
 
 type NotifState = AppNotification[];
@@ -48,6 +48,18 @@ export function pushNotification(input: Omit<AppNotification, "id" | "read">) {
   ]);
 }
 
+type NoticeTone = "success" | "error" | "info";
+
+/** Simpan setiap pemberitahuan ke inbox sebelum menampilkannya sebagai toast sementara. */
+export function notify(title: string, body = "", tone: NoticeTone = "info") {
+  pushNotification({
+    title,
+    body: body || title,
+    time: new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }),
+  });
+  toast[tone](title, body ? { description: body } : undefined);
+}
+
 export function markNotificationRead(id: string) {
   const items = getSafeItems();
   notificationStore.set(
@@ -60,19 +72,8 @@ export function markAllNotificationsRead() {
   notificationStore.set(items.map((n) => ({ ...n, read: true })));
 }
 
-export function deleteNotification(id: string) {
-  const items = getSafeItems();
-  notificationStore.set(items.filter((n) => n.id !== id));
-}
-
 export function clearNotifications() {
   notificationStore.set([]);
-}
-
-/** Tandai notifikasi sebagai di-dismiss (hilang dari semua tampilan). */
-export function dismissNotification(id: string) {
-  const items = getSafeItems();
-  notificationStore.set(items.filter((n) => n.id !== id));
 }
 
 /** Toggle status baca (read/unread) pada satu notifikasi. */
@@ -83,13 +84,3 @@ export function toggleNotificationRead(id: string) {
   );
 }
 
-/** Kembalikan notifikasi yang sebelumnya di-dismiss (undo). */
-export function restoreNotifications() {
-  const items = getSafeItems();
-  notificationStore.set(items.map((n) => ({ ...n, dismissed: false })));
-}
-
-/** Daftar notifikasi yang aktif (tidak di-dismiss). */
-export function activeNotifications(): AppNotification[] {
-  return getSafeItems().filter((n) => !n.dismissed);
-}

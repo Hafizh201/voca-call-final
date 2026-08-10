@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/feedback/EmptyState";
 import { useStudents, type Student } from "@/lib/students";
 import { createCall } from "@/lib/call/stores";
 import { Users, PackageOpen, UserRoundCheck } from "lucide-react";
-import { toast } from "sonner";
 
 const searchSchema = z.object({ s: z.string().default("") });
 
@@ -135,7 +134,6 @@ function CallFormPage() {
             method,
           },
     );
-    toast.success(isTitipan ? "Panggilan titipan dikirim" : "Panggilan ditunggu dikirim");
     nav({ to: "/call/monitoring" });
   };
 

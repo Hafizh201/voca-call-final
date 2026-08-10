@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Share2, Link2, ScanLine, QrCode, ScanEye, CheckCircle2 } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 import { useNavigate } from "@tanstack/react-router";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
@@ -48,7 +48,7 @@ export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
         return;
       }
       await navigator.clipboard?.writeText(`${text}\n${url}`);
-      toast.success("Kode & tautan disalin");
+      notify("Kode & tautan disalin", "Kode penjemputan dan tautan telah disalin.", "success");
     } catch {
       /* dibatalkan pengguna */
     }
@@ -57,9 +57,9 @@ export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
   const onCopyLink = async () => {
     try {
       await navigator.clipboard?.writeText(shareUrlFor(code));
-      toast.success("Tautan disalin");
+      notify("Tautan disalin", "Tautan penjemputan telah disalin ke clipboard.", "success");
     } catch {
-      toast.error("Tidak dapat menyalin tautan");
+      notify("Tidak dapat menyalin tautan", "Periksa izin clipboard lalu coba lagi.", "error");
     }
   };
 
@@ -103,7 +103,7 @@ export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
           <button
             onClick={() => {
               simulateScan();
-              toast.success("Simulasi: QR dipindai petugas");
+              notify("QR dipindai petugas", "Simulasi pemindaian QR berhasil dijalankan.", "success");
             }}
             className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-surface-2 text-[13px] font-semibold text-muted-foreground transition active:scale-95"
           >
@@ -131,7 +131,6 @@ export function QrOnlyMonitoring({ current }: { current: PickupRequest }) {
           <button
             onClick={() => {
               finishAndArchive();
-              toast.success("Penjemputan selesai & disimpan ke riwayat");
               nav({ to: "/dashboard" });
             }}
             className="mt-4 inline-flex h-12 w-full max-w-xs items-center justify-center gap-2 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground shadow-card transition active:scale-95"

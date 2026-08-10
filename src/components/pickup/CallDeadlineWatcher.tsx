@@ -1,9 +1,8 @@
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
 import { useActivePickup } from "@/lib/state/stores";
 import { shouldForceStopPickup, nowWIBHHmm } from "@/lib/pickup/callDeadline";
 import { forceStopActivePickup } from "@/lib/pickup/simulator";
-import { pushNotification } from "@/lib/state/notificationStore";
+import { notify } from "@/lib/state/notificationStore";
 import { MAX_PICKUP_TIME_WIB } from "@/lib/dummy/data";
 
 /**
@@ -30,15 +29,11 @@ export function CallDeadlineWatcher() {
         firedRef.current = current.id;
         forceStopActivePickup();
         const at = nowWIBHHmm();
-        toast("Pemanggilan terpaksa dihentikan", {
-          description: `Waktu maksimal pemanggilan (${MAX_PICKUP_TIME_WIB} WIB) telah tercapai. Halaman monitoring dikosongkan.`,
-          duration: Infinity,
-        });
-        pushNotification({
-          title: "Pemanggilan terpaksa dihentikan",
-          body: `Waktu maksimal pemanggilan (${MAX_PICKUP_TIME_WIB} WIB) telah tercapai sehingga pemanggilan dihentikan otomatis.`,
-          time: `${at} WIB`,
-        });
+        notify(
+          "Pemanggilan terpaksa dihentikan",
+          `Waktu maksimal pemanggilan (${MAX_PICKUP_TIME_WIB} WIB) telah tercapai sehingga pemanggilan dihentikan otomatis pada ${at} WIB.`,
+          "error",
+        );
       }
     }, 1000);
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 import { Switch } from "@/components/ui/switch";
 import {
   MapPin,
@@ -221,9 +221,7 @@ export function AutoPickupGeofence() {
         if (!standbyNotifiedRef.current) {
           standbyNotifiedRef.current = true;
           appendTimeline("Sampai sekolah · menunggu jam kepulangan", "verified");
-          toast.info("Sudah sampai sekolah", {
-            description: "Ananda menunggu jam kepulangan sebelum dipanggil otomatis.",
-          });
+          notify("Sudah sampai sekolah", "Ananda menunggu jam kepulangan sebelum dipanggil otomatis.", "info");
         }
         return;
       }
@@ -275,9 +273,7 @@ export function AutoPickupGeofence() {
     timers.push(
       setTimeout(() => {
         appendTimeline("Pemanggilan diumumkan", "announcing");
-        toast.success("Ananda sudah dipanggil", {
-          description: names ? `${names} dipanggil melalui speaker sekolah.` : undefined,
-        });
+        notify("Ananda sudah dipanggil", names ? `${names} dipanggil melalui speaker sekolah.` : "Pemanggilan diumumkan melalui speaker sekolah.", "success");
       }, 3800),
     );
     return () => timers.forEach(clearTimeout);

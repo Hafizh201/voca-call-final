@@ -18,7 +18,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       closeButton
       swipeDirections={["left", "right"]}
-      duration={Infinity}
+      duration={2000}
       {...props}
     />
   );

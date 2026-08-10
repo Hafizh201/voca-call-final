@@ -9,9 +9,9 @@ export const Route = createFileRoute("/login_/pin")({
   head: () => ({
     meta: [
       { title: "PIN — Panggil" },
-      { name: "description", content: "Masukkan 4 digit PIN untuk masuk ke Panggil." },
+      { name: "description", content: "Masukkan 6 digit PIN untuk masuk ke Panggil." },
       { property: "og:title", content: "PIN — Panggil" },
-      { property: "og:description", content: "Autentikasi PIN 4 digit yang aman dan sederhana." },
+      { property: "og:description", content: "Autentikasi PIN 6 digit yang aman dan sederhana." },
     ],
   }),
   component: LoginPin,
@@ -29,7 +29,7 @@ const [errorMessage, setErrorMessage] = useState("");
   }, [session.username, nav]);
 
 useEffect(() => {
-    if (pin.length !== 4) return;
+    if (pin.length !== 6) return;
     if (loading) return;
 
     async function verifyPin() {
@@ -84,10 +84,10 @@ useEffect(() => {
       <div className="flex min-h-screen flex-col px-6 pt-14">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Halo, {session.namaWalmur || session.username}</p>
         <h1 className="mt-2 font-display text-2xl font-bold text-ink">Masukkan PIN Anda</h1>
-<p className="mt-1 text-xs text-muted-foreground">Gunakan 4 digit PIN Anda.</p>
+<p className="mt-1 text-xs text-muted-foreground">Gunakan 6 digit PIN Anda.</p>
 
         <div className="mt-10 mb-8">
-          <PinDots length={4} filled={pin.length} shake={shake} />
+          <PinDots length={6} filled={pin.length} shake={shake} />
         </div>
         <div className="mt-3 h-5">
           <p className={`text-center text-xs text-red-500 transition-all duration-200 ${
@@ -104,7 +104,7 @@ useEffect(() => {
           disabled={loading}
           onDigit={(d) => {
     setErrorMessage("");
-    setPin((p) => (p.length < 4 ? p + d : p));
+    setPin((p) => (p.length < 6 ? p + d : p));
 }}
           onBackspace={() => setPin((p) => p.slice(0, -1))}
         />

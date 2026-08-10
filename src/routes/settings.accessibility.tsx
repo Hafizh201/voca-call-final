@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSettings, settingsStore, type TextScale } from "@/lib/state/stores";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 
 export const Route = createFileRoute("/settings/accessibility")({
   head: () => ({
@@ -108,7 +108,7 @@ function AccessibilityPage() {
           onClick={() => {
             settingsStore.set({ textScale: "normal", highContrast: false, reduceMotion: false, elderlyMode: false });
             if (typeof document !== "undefined") document.documentElement.dataset.elderly = "false";
-            toast.success("Pengaturan aksesibilitas dikembalikan");
+            notify("Pengaturan aksesibilitas dikembalikan", "Pengaturan aksesibilitas telah kembali ke nilai awal.", "success");
           }}
           className="w-full rounded-2xl border border-border bg-surface-2 px-4 py-3 text-sm font-semibold text-foreground transition active:scale-95"
         >

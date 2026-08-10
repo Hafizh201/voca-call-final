@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { QrCode, Copy, ScanLine } from "lucide-react";
-import { toast } from "sonner";
+import { notify } from "@/lib/state/notificationStore";
 
 export function QrTicket({ code, announcement }: { code: string; announcement: string }) {
   const [src, setSrc] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function QrTicket({ code, announcement }: { code: string; announcement: s
         <button
           onClick={() => {
             navigator.clipboard?.writeText(code);
-            toast.success("Kode penjemputan disalin");
+            notify("Kode penjemputan disalin", "Kode QR telah disalin ke clipboard.", "success");
           }}
           className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-3 py-1.5 text-[11px] font-semibold text-foreground transition active:scale-95"
         >
