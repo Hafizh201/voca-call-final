@@ -58,7 +58,7 @@ function DashboardContent() {
   const session = useSession();
   const nav = useNavigate();
 const { current } = useActivePickup();
-const { students } = useStudents();
+const { students, isInitialLoading } = useStudents();
 const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
   const pickupBlock = pickupBlockReason();
   const pickupClosed = pickupBlock !== null;
@@ -70,6 +70,8 @@ const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval)
   useEffect(() => {
     if (!session.signedIn) nav({ to: "/login" });
   }, [session.signedIn, nav]);
+
+  if (isInitialLoading) return <DashboardSkeleton />;
 
   return (
     <PhoneShell>

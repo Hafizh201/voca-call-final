@@ -141,7 +141,7 @@ function HistoryList({
               <p className="truncate text-sm font-semibold text-ink">{p.student}</p>
             )}
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              {p.method} · {p.date} · {p.time}
+              {p.method} · {p.date} · {p.time} · {p.callCount}× panggilan
             </p>
           </div>
           <Chip tone={p.status === "Selesai" ? "success" : "warning"}>{p.status}</Chip>
@@ -493,6 +493,7 @@ function HistoryPage() {
                   ["Tipe", detail.method],
                   ["Tanggal", detail.date],
                   ["Waktu", detail.time],
+                  ["Jumlah panggilan", `${detail.callCount}×`],
                   ["Status", detail.status],
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-center justify-between gap-3 py-2.5">

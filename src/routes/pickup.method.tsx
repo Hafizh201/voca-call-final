@@ -30,11 +30,11 @@ function MethodPage() {
   const ready = usePageReady();
   const [method, setMethod] = useState<Method | null>(null);
 const nav = useNavigate();
-const { students } = useStudents();
+const { students, isInitialLoading } = useStudents();
 const active = students.filter((s) => !s.pendingApproval);
 const needsSelect = active.length > 1;
   const block = pickupBlockReason();
-  if (!ready) return <PageSkeleton withNav={false} />;
+  if (!ready || isInitialLoading) return <PageSkeleton withNav={false} />;
 
   // Jika pemanggilan terblokir (master off ATAU lewat jam tutup di hari sekolah), blokir alur penjemputan.
   if (block) {

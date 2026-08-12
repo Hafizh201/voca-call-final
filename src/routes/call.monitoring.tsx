@@ -14,6 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { secondCallOptions } from "@/lib/dummy/data";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { listRecallIds, type RecallSourceTable } from "@/lib/recall";
 
 const COOLDOWN_MS = 180_000;
 
@@ -33,9 +34,11 @@ function CallMonitoringPage() {
   const ready = usePageReady();
   const nav = useNavigate();
   const { current } = useActiveCall();
-  const { students } = useStudents();
+  const { students, isInitialLoading } = useStudents();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [recallIds, setRecallIds] = useState<string[]>([]);
+  const [selectedRecallId, setSelectedRecallId] = useState("");
   const [, setTick] = useState(0);
 
   // Tick agar hitung mundur cooldown tetap berjalan.
@@ -45,7 +48,18 @@ function CallMonitoringPage() {
     return () => clearInterval(t);
   }, [current]);
 
-  if (!ready) return <PageSkeleton withNav={false} />;
+  useEffect(() => {
+    if (!open || !current || current.idPemanggilan) return;
+    const table: RecallSourceTable = current.type === "titipan" ? "panggil_titipan" : "panggil_ditunggu";
+    void listRecallIds(table)
+      .then((ids) => {
+        setRecallIds(ids);
+        setSelectedRecallId(ids[0] ?? "");
+      })
+      .catch((error) => notify("Gagal memuat ID pemanggilan", error instanceof Error ? error.message : "Coba lagi.", "error"));
+  }, [open, current]);
+
+  if (!ready || (current !== null && isInitialLoading)) return <PageSkeleton withNav={false} />;
 
   if (!current) {
     return (
@@ -194,6 +208,19 @@ function CallMonitoringPage() {
               <p className="text-xs text-muted-foreground">Pilih satu atau lebih kalimat tambahan.</p>
             </SheetHeader>
             <div className="mt-4 space-y-2">
+              {!current.idPemanggilan && (
+                <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+                  Pilih ID pemanggilan lama
+                  <select
+                    value={selectedRecallId}
+                    onChange={(event) => setSelectedRecallId(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-ink"
+                  >
+                    <option value="">Pilih ID</option>
+                    {recallIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </label>
+              )}
               {secondCallOptions.map((o) => {
                 const on = extras.includes(o);
                 return (
@@ -231,7 +258,7 @@ function CallMonitoringPage() {
               <BigButton
                 onClick={async () => {
                   try {
-                    await triggerCallRecall(extras);
+                    await triggerCallRecall(extras, selectedRecallId || undefined);
                     setExtras([]);
                     setOpen(false);
                   } catch (error) {

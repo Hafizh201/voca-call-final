@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { createStore } from "@/lib/state/stores";
-import { insertCallHistory, updateCallCallCount, markCallDone, kataPanggilanFrom } from "@/lib/call/history";
+import { insertCallHistory, markCallDone, kataPanggilanFrom } from "@/lib/call/history";
 import { persistRecall, type RecallSourceTable } from "@/lib/recall";
 import { notify } from "@/lib/state/notificationStore";
 import { getStudents } from "@/lib/students";
@@ -157,23 +157,23 @@ export function completeAndStartCooldown() {
  * Recall / panggil ulang — menambah jumlah_pemanggilan, reset cooldown,
  * dan memperbarui kalimat bila ada tambahan `extras`.
  */
-export async function triggerCallRecall(extras: string[] = []) {
+export async function triggerCallRecall(extras: string[] = [], selectedIdPemanggilan?: string) {
   const s = callStore.get();
   if (!s.current) return;
   const call = s.current;
-  if (!call.idPemanggilan) throw new Error("ID pemanggilan belum tersedia untuk recall.");
-  const sourceTable: RecallSourceTable = call.type === "titipan" ? "panggil_titipan" : "panggil_ditunggu";
-  const recall = await persistRecall(sourceTable, call.idPemanggilan);
-  const nextCount = recall.pemanggilanKe;
+  const idPemanggilan = selectedIdPemanggilan ?? call.idPemanggilan;
+  if (!idPemanggilan) throw new Error("Pilih ID pemanggilan sebelum melakukan recall.");
   const extraSentence = extras.length ? " " + extras.join(" ") : "";
+  const nextAnnouncement = call.announcement + extraSentence;
+  const sourceTable: RecallSourceTable = call.type === "titipan" ? "panggil_titipan" : "panggil_ditunggu";
+  const recall = await persistRecall(sourceTable, idPemanggilan, nextAnnouncement);
+  const nextCount = recall.pemanggilanKe;
   const updated: ActiveCall = {
     ...call,
     callCount: nextCount,
     cooldownStartedAt: Date.now(),
-    announcement: call.announcement + extraSentence,
+    announcement: nextAnnouncement,
   };
   callStore.set({ current: updated });
   notify(`Panggilan ulang ke-${nextCount} dikirim`, studentNames(call.studentIds) || "Panggilan ulang sedang diumumkan.", "success");
-  // Recall sudah tersimpan; sinkronkan penghitung pada row asal.
-  void updateCallCallCount(updated);
 }

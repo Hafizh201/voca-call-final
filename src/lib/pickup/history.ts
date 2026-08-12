@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getStudents } from "@/lib/students";
 import { sessionStore, type PickupRequest } from "@/lib/state/stores";
+import type { PickupDraft } from "@/lib/pickup/draft";
 
 /**
  * CCTV PEMANTAU RIWAYAT PEMANGGILAN (backend/debug)
@@ -22,6 +23,9 @@ message: string;
 
 const cctvListeners = new Set<() => void>();
 let cctvLogs: CctvLogEntry[] = [];
+// Menahan UPDATE hingga INSERT awal untuk id yang sama benar-benar selesai.
+// Ini mencegah klik cepat di halaman ringkasan mengalahkan INSERT awal.
+const pendingPickupBegins = new Map<string, Promise<string | null>>();
 
 export function getCctvLogs(): CctvLogEntry[] {
   return cctvLogs;
@@ -65,6 +69,28 @@ export function clearCctvLogs() {
  */
 
 export type PickupTableName = "panggil_self" | "panggil_other" | "panggil_ojek";
+
+const ALL_CALL_TABLES = ["panggil_self", "panggil_other", "panggil_ojek", "panggil_ditunggu", "panggil_titipan"] as const;
+
+/**
+ * Cari ID baru yang belum dipakai di tabel panggilan mana pun. Karena
+ * id_pemanggilan bukan primary key, pengecekan ini menjaga agar hanya INSERT
+ * pertama yang menciptakan sebuah grup panggilan; recall memakai ID tersebut.
+ */
+export async function ensureUnusedPemanggilanId(preferred = Date.now()): Promise<string> {
+  let candidate = Math.max(1, Math.floor(preferred));
+  for (let attempt = 0; attempt < 20; attempt += 1, candidate += 1) {
+    const checks = await Promise.all(
+      ALL_CALL_TABLES.map(async (table) => {
+        const { data, error } = await supabase.from(table).select("id_pemanggilan").eq("id_pemanggilan", candidate).limit(1);
+        if (error) throw new Error(`Gagal memeriksa ID pada ${table}: ${error.message}`);
+        return (data?.length ?? 0) > 0;
+      }),
+    );
+    if (!checks.some(Boolean)) return String(candidate);
+  }
+  throw new Error("Tidak dapat menemukan id_pemanggilan baru yang aman. Silakan coba lagi.");
+}
 
 function tableForMethod(method: PickupRequest["method"]): PickupTableName {
   if (method === "other") return "panggil_other";
@@ -136,6 +162,24 @@ function buildPayload(req: PickupRequest, idWali: string | null) {
   const firstName = allNames || req.studentIds[0] || "";
   const firstClass = first?.className ?? "";
   const firstIdKelas = first?.idKelas ?? "";
+  // `short_messg` adalah catatan yang ditulis wali, bukan kalimat pengumuman.
+  // `kata_panggilan` harus selalu tersedia, termasuk saat record awal dibuat
+  // ketika `req.announcement` belum dibentuk oleh simulator.
+  const shortMessg = [req.note?.trim(), ...(req.noteExtras ?? [])].filter(Boolean).join(" ") || null;
+  const calledForAnnouncement = called.map((student) => student.name?.trim()).filter(Boolean).join(" dan Ananda ");
+  const caller =
+    req.method === "self"
+      ? "orang tua"
+      : req.method === "other"
+        ? req.pickerName?.trim() || "penjemput"
+        : req.driverName?.trim() || "driver ojek online";
+  const kataPanggilan =
+    req.announcement ||
+    (calledForAnnouncement
+      ? `Kepada Ananda ${calledForAnnouncement} kelas ${firstClass}, dipersilakan menuju area penjemputan karena ${caller} telah tiba.${
+          shortMessg ? ` ${shortMessg}` : ""
+        } Terima kasih.`
+      : null);
 
   const base = {
     id_pemanggilan: req.idPemanggilan ? Number(req.idPemanggilan) : numericId(),
@@ -147,11 +191,14 @@ function buildPayload(req: PickupRequest, idWali: string | null) {
     waktu_pemanggilan: toWib(req.createdAt),
     posisi_tunggu: req.waitLocation?.trim() || null,
     catatan_p: req.note?.trim() || null,
-    short_messg: req.announcement || null,
+    short_messg: shortMessg,
     method: req.method,
 jumlah_pemanggilan: req.callCount,
-    kata_panggilan: req.announcement || null,
+    kata_panggilan: kataPanggilan,
     done: false,
+    // Record dibuat sejak halaman form dibuka. Nilai ini baru menjadi true
+    // sesudah pengguna mengirim permintaan dari halaman ringkasan.
+    done_write: false,
     // id_jenis_pemanggilan dari tabel `type_panggil`:
     //   1=self, 2=other, 3=ojek, 4=ditunggu, 5=titipan
     id_jenis_pemanggilan: req.method === "self" ? 1 : req.method === "other" ? 2 : 3,
@@ -166,6 +213,102 @@ jumlah_pemanggilan: req.callCount,
   }
 
   return base;
+}
+
+/** Data minimum untuk record sementara yang dicicil selama form diisi. */
+export type PickupWriteInput = {
+  idPemanggilan: string;
+  studentIds: string[];
+  method: PickupRequest["method"];
+  draft: PickupDraft;
+};
+
+function requestFromWrite(input: PickupWriteInput): PickupRequest {
+  const createdAt = Number(input.idPemanggilan) || Date.now();
+  return {
+    id: `draft-${input.idPemanggilan}`,
+    idPemanggilan: input.idPemanggilan,
+    studentIds: input.studentIds,
+    method: input.method,
+    note: input.draft.note,
+    noteExtras: input.draft.noteExtras,
+    estimate: input.draft.estimate,
+    waitLocation: input.draft.waitLocation,
+    pickerName: input.draft.pickerName,
+    driverName: input.draft.driverName,
+    platform: input.draft.platform,
+    plate: input.draft.plate,
+    createdAt,
+    stage: "received",
+    timeline: [],
+    announcement: "",
+    cooldownStartedAt: null,
+    secondCallExtras: [],
+    callCount: 1,
+  };
+}
+
+/**
+ * Buat row kosong-terisi di awal form. Dengan begitu upload besar tidak lagi
+ * terjadi saat tombol kirim ditekan, dan id_pemanggilan sudah tersedia untuk
+ * semua UPDATE berikutnya.
+ */
+export function beginPickupWrite(input: PickupWriteInput): Promise<string | null> {
+  const pending = (async () => {
+    const idPemanggilan = await ensureUnusedPemanggilanId(Number(input.idPemanggilan));
+    const safeInput = { ...input, idPemanggilan };
+    const req = requestFromWrite(safeInput);
+    const idWali = await resolveWaliId(sessionStore.get().username);
+    const table = tableForMethod(safeInput.method);
+    const payload = buildPayload(req, idWali);
+    try {
+      const { data, error } = await supabase.from(table).insert(payload).select("id_pemanggilan").maybeSingle();
+      if (error) {
+        pushCctv({ type: "error", table, action: "INSERT", message: `INSERT awal ${table} GAGAL`, idPemanggilan, detail: error.message });
+        return null;
+      }
+      const savedId = String(data?.id_pemanggilan ?? idPemanggilan);
+      pushCctv({ type: "ok", table, action: "INSERT", message: "Record form awal berhasil dibuat (done_write=false)", idPemanggilan: savedId });
+      return savedId;
+    } catch (error) {
+      pushCctv({ type: "error", table, action: "INSERT", message: "INSERT awal error (exception)", idPemanggilan, detail: error instanceof Error ? error.message : String(error) });
+      return null;
+    }
+  })();
+  pendingPickupBegins.set(input.idPemanggilan, pending);
+  void pending.finally(() => {
+    if (pendingPickupBegins.get(input.idPemanggilan) === pending) pendingPickupBegins.delete(input.idPemanggilan);
+  });
+  return pending;
+}
+
+/** Simpan data form yang sudah tersedia ke row awal yang sama. */
+export async function savePickupWrite(input: PickupWriteInput, doneWrite = false): Promise<boolean> {
+  const pending = pendingPickupBegins.get(input.idPemanggilan);
+  if (pending) {
+    const savedId = await pending;
+    if (!savedId) return false;
+    input = { ...input, idPemanggilan: savedId };
+  }
+  const req = requestFromWrite(input);
+  const table = tableForMethod(input.method);
+  const payload = buildPayload(req, null);
+  const { id_pemanggilan: _id, id_wali: _wali, waktu_pemanggilan: _time, ...changes } = payload;
+  try {
+    const { error } = await supabase
+      .from(table)
+      .update({ ...changes, done_write: doneWrite })
+      .eq("id_pemanggilan", Number(input.idPemanggilan));
+    if (error) {
+      pushCctv({ type: "error", table, action: "UPDATE", message: "Simpan cicilan form GAGAL", idPemanggilan: input.idPemanggilan, detail: error.message });
+      return false;
+    }
+    pushCctv({ type: "ok", table, action: "UPDATE", message: doneWrite ? "Form final tersimpan (done_write=true)" : "Cicilan form tersimpan", idPemanggilan: input.idPemanggilan });
+    return true;
+  } catch (error) {
+    pushCctv({ type: "error", table, action: "UPDATE", message: "Simpan cicilan form error", idPemanggilan: input.idPemanggilan, detail: error instanceof Error ? error.message : String(error) });
+    return false;
+  }
 }
 
 /**
@@ -345,6 +488,8 @@ export type PickupHistoryItem = {
   date: string;
   time: string;
   status: string;
+  /** Total panggilan awal + seluruh recall untuk id_pemanggilan yang sama. */
+  callCount: number;
   ts: number; // timestamp mentah (ms) untuk filter yang akurat
 };
 
@@ -364,7 +509,7 @@ export async function fetchPickupHistory(): Promise<PickupHistoryItem[]> {
   if (!idWali) return [];
 
   const tables: PickupTableName[] = ["panggil_self", "panggil_other", "panggil_ojek"];
-  const results: PickupHistoryItem[] = [];
+  const grouped = new Map<string, PickupHistoryItem>();
 
   for (const table of tables) {
     const { data, error } = await supabase
@@ -396,7 +541,7 @@ export async function fetchPickupHistory(): Promise<PickupHistoryItem[]> {
       const time = d
         ? d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
         : "-";
-results.push({
+      const item: PickupHistoryItem = {
         id: String(raw.id_pemanggilan),
         student: raw.nama_siswa?.trim() || "-",
         method: label,
@@ -404,11 +549,23 @@ results.push({
         time,
         status: raw.done ? "Selesai" : "Diproses",
         ts: d ? d.getTime() : Number(raw.id_pemanggilan) || Date.now(),
-      });
+        callCount: Number(raw.jumlah_pemanggilan) || 1,
+      };
+      const key = `${table}:${item.id}`;
+      const previous = grouped.get(key);
+      if (!previous) {
+        grouped.set(key, item);
+      } else if (item.ts < previous.ts) {
+        // Gunakan jam panggilan pertama, tetapi total recall tertinggi.
+        grouped.set(key, { ...item, callCount: Math.max(previous.callCount, item.callCount), status: previous.status === "Selesai" || item.status === "Selesai" ? "Selesai" : "Diproses" });
+      } else {
+        grouped.set(key, { ...previous, callCount: Math.max(previous.callCount, item.callCount), status: previous.status === "Selesai" || item.status === "Selesai" ? "Selesai" : "Diproses" });
+      }
     }
   }
 
   // Gabung & urutkan berdasarkan id_pemanggilan (timestamp) terbaru.
+  const results = [...grouped.values()];
   results.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
   return results;
 }

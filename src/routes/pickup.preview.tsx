@@ -12,6 +12,7 @@ import { submitPickup } from "@/lib/pickup/simulator";
 import { formatPlate } from "@/lib/format/utils";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { savePickupWrite } from "@/lib/pickup/history";
 
 const searchSchema = z.object({ s: z.string(), f: z.string().optional() });
 
@@ -34,11 +35,11 @@ function PreviewPage() {
   const [checks, setChecks] = useState({ data: false, kontak: false });
   const nav = useNavigate();
   const draft = getDraft();
-  const { students } = useStudents();
+  const { students, isInitialLoading } = useStudents();
   const studentIds = s.split(",");
   const chosen = studentIds.map((id: string) => students.find((x) => x.id === id)!).filter(Boolean);
   const allChecked = checks.data && checks.kontak;
-  if (!ready) return <FormSkeleton />;
+  if (!ready || isInitialLoading) return <FormSkeleton />;
 
   const estimateLabel =
     draft.estimate === "sudah"
@@ -68,8 +69,15 @@ function PreviewPage() {
     ["Catatan penting", draft.noteExtras.length > 0 ? draft.noteExtras.join(" ") : "—"],
   ];
 
-  const submit = () => {
+  const submit = async () => {
+    const idPemanggilan = draft.idPemanggilan;
+    if (idPemanggilan) {
+      // UPDATE terakhir berukuran kecil; done_write hanya true setelah data
+      // final berhasil diminta untuk disimpan.
+      await savePickupWrite({ idPemanggilan, studentIds, method: draft.method, draft }, true);
+    }
     submitPickup({
+      idPemanggilan,
       studentIds,
       method: draft.method,
       note: draft.note,

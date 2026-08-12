@@ -33,7 +33,7 @@ export const Route = createFileRoute("/pickup/select")({
 function SelectStudent() {
   const ready = usePageReady();
   const { m } = Route.useSearch();
-const { students } = useStudents();
+const { students, isInitialLoading } = useStudents();
 const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
   const [selected, setSelected] = useState<string[]>(active[0] ? [active[0].id] : []);
 const [friendOpen, setFriendOpen] = useState(false);
@@ -41,7 +41,7 @@ const [friendOpen, setFriendOpen] = useState(false);
   const [closeAsk, setCloseAsk] = useState(false);
   const [submitAsk, setSubmitAsk] = useState(false);
   const nav = useNavigate();
-  if (!ready) return <PageSkeleton withNav={false} />;
+  if (!ready || isInitialLoading) return <PageSkeleton withNav={false} />;
 
   const toggle = (id: string) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

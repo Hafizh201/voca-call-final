@@ -60,7 +60,8 @@ export async function fetchStudents(username: string | null): Promise<Student[]>
     .eq("username", username)
     .single();
 
-  if (userError || !userData) return [];
+  if (userError) throw userError;
+  if (!userData) return [];
   const userId = userData.id;
 
   // 2) Ambil semua siswa milik user (user_id1 ATAU user_id2) beserta nama
@@ -73,7 +74,8 @@ export async function fetchStudents(username: string | null): Promise<Student[]>
     )
     .or(`user_id1.eq.${userId},user_id2.eq.${userId}`);
 
-  if (error || !data) return [];
+  if (error) throw error;
+  if (!data) return [];
 
   const rows = data as unknown as Array<Record<string, unknown>>;
 
@@ -143,9 +145,13 @@ export function useStudents() {
     staleTime: 60_000,
   });
 
+  const cached = getStudents();
   return {
-    students: query.data ?? getStudents(),
+    students: query.data ?? cached,
     isLoading: query.isLoading,
     isError: query.isError,
+    // Jangan membuka form dengan array kosong hanya karena request pertama
+    // masih berjalan. Cache yang sudah ada tetap boleh dipakai saat offline.
+    isInitialLoading: query.isLoading && query.data === undefined && cached.length === 0,
   };
 }

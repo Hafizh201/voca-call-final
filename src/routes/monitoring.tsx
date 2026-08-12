@@ -34,6 +34,7 @@ import { secondCallOptions } from "@/lib/dummy/data";
 import { useStudents } from "@/lib/students";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { listRecallIds, type RecallSourceTable } from "@/lib/recall";
 
 const COOLDOWN_MS = 180_000;
 
@@ -52,10 +53,12 @@ export const Route = createFileRoute("/monitoring")({
 function Monitoring() {
   const ready = usePageReady();
 const { current } = useActivePickup();
-const { students } = useStudents();
+const { students, isInitialLoading } = useStudents();
   const nav = useNavigate();
   const [extras, setExtras] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
+  const [recallIds, setRecallIds] = useState<string[]>([]);
+  const [selectedRecallId, setSelectedRecallId] = useState("");
   const [confirmDone, setConfirmDone] = useState(false);
   const [, setTick] = useState(0);
 
@@ -65,6 +68,17 @@ const { students } = useStudents();
     }
   }, [current]);
 
+  useEffect(() => {
+    if (!open || !current || current.idPemanggilan) return;
+    const table: RecallSourceTable = `panggil_${current.method}`;
+    void listRecallIds(table)
+      .then((ids) => {
+        setRecallIds(ids);
+        setSelectedRecallId(ids[0] ?? "");
+      })
+      .catch((error) => notify("Gagal memuat ID pemanggilan", error instanceof Error ? error.message : "Coba lagi.", "error"));
+  }, [open, current]);
+
   // Tick agar hitung mundur tetap berjalan saat cooldown aktif.
   useEffect(() => {
     if (!current || current.cooldownStartedAt === null) return;
@@ -72,7 +86,7 @@ const { students } = useStudents();
     return () => clearInterval(t);
   }, [current]);
 
-  if (!ready) return <MonitoringSkeleton />;
+  if (!ready || (current !== null && isInitialLoading)) return <MonitoringSkeleton />;
 
   if (!current) {
     return (
@@ -244,6 +258,19 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
               <p className="text-xs text-muted-foreground">Pilih satu atau lebih kalimat tambahan.</p>
             </SheetHeader>
             <div className="mt-4 space-y-2">
+              {!current.idPemanggilan && (
+                <label className="block space-y-1 text-xs font-semibold text-muted-foreground">
+                  Pilih ID pemanggilan lama
+                  <select
+                    value={selectedRecallId}
+                    onChange={(event) => setSelectedRecallId(event.target.value)}
+                    className="w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-ink"
+                  >
+                    <option value="">Pilih ID</option>
+                    {recallIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </label>
+              )}
               {secondCallOptions.map((o) => {
                 const on = extras.includes(o);
                 return (
@@ -281,7 +308,7 @@ const lastLabel = STAGE_LABELS[current.stage] ?? "Sedang dipanggil";
               <BigButton
                 onClick={async () => {
                   try {
-                    await triggerSecondCall(extras);
+                    await triggerSecondCall(extras, selectedRecallId || undefined);
                     setExtras([]);
                     setOpen(false);
                   } catch (error) {

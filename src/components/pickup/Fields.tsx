@@ -8,12 +8,14 @@ export function DropdownField({
   onChange,
   options,
   hint,
+  onBlur,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   hint?: string;
+  onBlur?: () => void;
 }) {
   return (
     <div className="space-y-1">
@@ -22,6 +24,7 @@ export function DropdownField({
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           className="w-full appearance-none rounded-2xl bg-transparent px-3 py-3.5 pr-10 text-sm font-semibold text-ink outline-none"
         >
           {options.map((o) => (
@@ -38,7 +41,7 @@ export function DropdownField({
 }
 
 
-export function PlateInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function PlateInput({ value, onChange, onBlur }: { value: string; onChange: (v: string) => void; onBlur?: () => void }) {
   const formatted = formatPlate(value);
   const valid = value.length === 0 || isValidPlate(value);
   return (
@@ -48,6 +51,7 @@ export function PlateInput({ value, onChange }: { value: string; onChange: (v: s
         <input
           value={formatted}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder="B 1234 XYZ"
           inputMode="text"
           autoCapitalize="characters"
@@ -67,12 +71,14 @@ export function TextField({
   onChange,
   placeholder,
   hint,
+  onBlur,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   hint?: string;
+  onBlur?: () => void;
 }) {
   return (
     <div className="space-y-1">
@@ -81,6 +87,7 @@ export function TextField({
         <input
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           className="w-full bg-transparent text-sm text-ink outline-none placeholder:text-muted-foreground/60"
         />
@@ -95,11 +102,13 @@ export function SelectField<T extends string>({
   value,
   onChange,
   options,
+  onBlur,
 }: {
   label: string;
   value: T;
   onChange: (v: T) => void;
   options: { value: T; label: string }[];
+  onBlur?: () => void;
 }) {
   return (
     <div className="space-y-1">
@@ -111,7 +120,10 @@ export function SelectField<T extends string>({
             <button
               key={o.value}
               type="button"
-              onClick={() => onChange(o.value)}
+              onClick={() => {
+                onChange(o.value);
+                onBlur?.();
+              }}
               className={cn(
                 "rounded-2xl border px-3 py-2 text-xs font-semibold transition active:scale-95",
                 active ? "border-primary bg-primary text-primary-foreground shadow-card" : "border-border bg-surface text-foreground",

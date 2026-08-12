@@ -2,6 +2,9 @@ import { useSyncExternalStore } from "react";
 import { createStore } from "@/lib/state/stores";
 
 export type PickupDraft = {
+  /** Row Supabase yang dibuat saat form dibuka; dipakai untuk UPDATE bertahap. */
+  idPemanggilan?: string;
+  writeMethod?: "self" | "other" | "ojek";
   method: "self" | "other" | "ojek";
   note: string;
   noteExtras: string[];

@@ -10,6 +10,7 @@ export function SmartNoteAssistant({
   extras,
   onExtrasChange,
   onValidityChange,
+  onBlur,
 }: {
   method: "self" | "other" | "ojek";
   value: string;
@@ -17,6 +18,7 @@ export function SmartNoteAssistant({
   extras: string[];
   onExtrasChange: (v: string[]) => void;
   onValidityChange?: (valid: boolean) => void;
+  onBlur?: () => void;
 }) {
   const [bad, setBad] = useState<string[]>([]);
   const remaining = MAX_NOTE - value.length;
@@ -28,8 +30,10 @@ export function SmartNoteAssistant({
     onValidityChange?.(b.length === 0 && value.length <= MAX_NOTE);
   }, [value, onValidityChange]);
 
-  const toggle = (s: string) =>
+  const toggle = (s: string) => {
     onExtrasChange(extras.includes(s) ? extras.filter((x) => x !== s) : [...extras, s]);
+    onBlur?.();
+  };
 
   return (
     <div className="space-y-4">
@@ -49,6 +53,7 @@ export function SmartNoteAssistant({
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value.slice(0, MAX_NOTE))}
+            onBlur={onBlur}
             rows={3}
             placeholder="Tulis catatan singkat (opsional)"
             className="w-full resize-none bg-transparent text-sm leading-relaxed text-ink outline-none placeholder:text-muted-foreground/60"
@@ -59,7 +64,10 @@ export function SmartNoteAssistant({
             </div>
             <button
               type="button"
-              onClick={() => onChange(politeCorrection(value))}
+              onClick={() => {
+                onChange(politeCorrection(value));
+                onBlur?.();
+              }}
               disabled={!value.trim()}
               className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition active:scale-95 disabled:opacity-40"
             >

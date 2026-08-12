@@ -59,7 +59,7 @@ function CallFormPage() {
   const { s: sParam } = Route.useSearch();
   const isTitipan = type === "titipan";
   const nav = useNavigate();
-  const { students } = useStudents();
+  const { students, isInitialLoading } = useStudents();
 
   const [ditungguOleh, setDitungguOleh] = useState("");
   const [posisiTunggu, setPosisiTunggu] = useState(POSISI_TUNGGU[0]);
@@ -68,7 +68,7 @@ function CallFormPage() {
   const [shortMessg, setShortMessg] = useState("");
   const [method, setMethod] = useState("speaker");
 
-  if (!ready) return <FormSkeleton />;
+  if (!ready || isInitialLoading) return <FormSkeleton />;
 
   if (type !== "titipan" && type !== "ditunggu") {
     return (

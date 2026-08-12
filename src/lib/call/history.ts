@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { getStudents } from "@/lib/students";
 import { sessionStore } from "@/lib/state/stores";
-import { resolveWaliId, toWib, pushCctv, type CctvLogEntry } from "@/lib/pickup/history";
+import { ensureUnusedPemanggilanId, resolveWaliId, toWib, pushCctv, type CctvLogEntry } from "@/lib/pickup/history";
 import type { ActiveCall, CallType } from "@/lib/call/stores";
 
 /**
@@ -124,9 +124,11 @@ export function kataPanggilanFrom(call: ActiveCall): string {
  */
 export async function insertCallHistory(call: ActiveCall): Promise<void> {
   try {
+    const idPemanggilan = await ensureUnusedPemanggilanId(Number(call.idPemanggilan));
+    const safeCall = { ...call, idPemanggilan };
     const idWali = await resolveWaliId(sessionStore.get().username);
-    const table = tableForType(call.type);
-    const payload = buildPayload(call, idWali);
+    const table = tableForType(safeCall.type);
+    const payload = buildPayload(safeCall, idWali);
 
     pushCctv({
       type: "info",
@@ -134,7 +136,7 @@ export async function insertCallHistory(call: ActiveCall): Promise<void> {
       action: "INSERT",
       message: `Mengirim INSERT ke ${table}`,
       idPemanggilan: payload.id_pemanggilan,
-      callCount: call.callCount,
+      callCount: safeCall.callCount,
       detail: JSON.stringify({ nama_siswa: payload.nama_siswa, id_wali: idWali }),
     });
 
@@ -147,7 +149,7 @@ export async function insertCallHistory(call: ActiveCall): Promise<void> {
         action: "INSERT",
         message: `INSERT ${table} GAGAL`,
         idPemanggilan: payload.id_pemanggilan,
-        callCount: call.callCount,
+        callCount: safeCall.callCount,
         detail: error.message,
       });
       return;
@@ -159,7 +161,7 @@ export async function insertCallHistory(call: ActiveCall): Promise<void> {
       action: "INSERT",
       message: `INSERT ${table} BERHASIL`,
       idPemanggilan: data?.id_pemanggilan ? String(data.id_pemanggilan) : payload.id_pemanggilan,
-      callCount: call.callCount,
+      callCount: safeCall.callCount,
       detail: data ? `row id_pemanggilan: ${String(data.id_pemanggilan)}` : "data kosong",
     });
 
@@ -303,6 +305,8 @@ export type CallHistoryItem = {
   date: string;
   time: string;
   status: string;
+  /** Total panggilan awal + seluruh recall untuk id_pemanggilan yang sama. */
+  callCount: number;
   ts: number; // timestamp mentah (ms) untuk filter yang akurat
 };
 
@@ -321,7 +325,7 @@ export async function fetchCallHistory(): Promise<CallHistoryItem[]> {
   if (!idWali) return [];
 
   const tables: CallTableName[] = ["panggil_ditunggu", "panggil_titipan"];
-  const results: CallHistoryItem[] = [];
+  const grouped = new Map<string, CallHistoryItem>();
 
   for (const table of tables) {
     const { data, error } = await supabase
@@ -352,7 +356,7 @@ export async function fetchCallHistory(): Promise<CallHistoryItem[]> {
         ? d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
         : "-";
       const time = d ? d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-";
-      results.push({
+      const item: CallHistoryItem = {
         id: String(raw.id_pemanggilan),
         student: raw.nama_siswa?.trim() || "-",
         method: label,
@@ -360,10 +364,21 @@ export async function fetchCallHistory(): Promise<CallHistoryItem[]> {
         time,
         status: raw.done ? "Selesai" : "Diproses",
         ts: d ? d.getTime() : Number(raw.id_pemanggilan) || Date.now(),
-      });
+        callCount: Number(raw.jumlah_pemanggilan) || 1,
+      };
+      const key = `${table}:${item.id}`;
+      const previous = grouped.get(key);
+      if (!previous) {
+        grouped.set(key, item);
+      } else if (item.ts < previous.ts) {
+        grouped.set(key, { ...item, callCount: Math.max(previous.callCount, item.callCount), status: previous.status === "Selesai" || item.status === "Selesai" ? "Selesai" : "Diproses" });
+      } else {
+        grouped.set(key, { ...previous, callCount: Math.max(previous.callCount, item.callCount), status: previous.status === "Selesai" || item.status === "Selesai" ? "Selesai" : "Diproses" });
+      }
     }
   }
 
+  const results = [...grouped.values()];
   results.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
   return results;
 }

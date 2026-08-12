@@ -15,6 +15,32 @@ export function Shimmer({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Penanda loading di dalam halaman, bukan splash screen. Skeleton tetap
+ * terlihat di belakang agar pengguna tahu halaman mana yang sedang disiapkan.
+ */
+function PanggilLoadingCue() {
+  return (
+    <div className="pointer-events-none absolute inset-x-0 top-20 z-10 flex justify-center px-5" role="status" aria-live="polite">
+      <div className="flex items-center gap-3 rounded-2xl border border-primary/10 bg-background/85 px-3 py-2 shadow-card backdrop-blur-sm">
+        <span className="relative grid h-9 w-9 place-items-center overflow-hidden rounded-xl bg-primary text-sm font-display font-extrabold text-primary-foreground">
+          P
+          <span className="absolute inset-y-1 left-0 w-1/2 bg-white/20 panggil-loading-scan" />
+        </span>
+        <span>
+          <span className="block font-display text-xs font-bold text-ink">Panggil</span>
+          <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+            Menyiapkan data
+            <i className="panggil-loading-dot" />
+            <i className="panggil-loading-dot [animation-delay:140ms]" />
+            <i className="panggil-loading-dot [animation-delay:280ms]" />
+          </span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function TopBarSkeleton({ withBack = false }: { withBack?: boolean }) {
   return (
     <div className="flex items-center gap-3 px-5 pt-6">
@@ -44,6 +70,7 @@ function BottomNavSkeleton() {
 export function DashboardSkeleton() {
   return (
     <PhoneShell>
+      <PanggilLoadingCue />
       <TopBarSkeleton />
       <div className="mx-5 mt-5">
         <Shimmer className="h-56 rounded-3xl" />
@@ -78,6 +105,7 @@ export function PageSkeleton({
 }) {
   return (
     <PhoneShell>
+      <PanggilLoadingCue />
       <TopBarSkeleton withBack={withBack} />
       <div className="mx-5 mt-6 space-y-3">
         <Shimmer className="h-32 rounded-3xl" />
@@ -93,6 +121,7 @@ export function PageSkeleton({
 export function FormSkeleton() {
   return (
     <PhoneShell>
+      <PanggilLoadingCue />
       <TopBarSkeleton withBack />
       <div className="mx-5 mt-6 space-y-4">
         <Shimmer className="h-24 rounded-3xl" />
@@ -117,6 +146,7 @@ export function FormSkeleton() {
 export function MonitoringSkeleton() {
   return (
     <PhoneShell>
+      <PanggilLoadingCue />
       <TopBarSkeleton withBack />
       <div className="mt-8 flex flex-col items-center gap-4">
         <Shimmer className="h-48 w-48 rounded-full" />

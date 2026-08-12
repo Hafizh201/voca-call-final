@@ -30,12 +30,12 @@ export const Route = createFileRoute("/call/select")({
 function CallSelectPage() {
   const ready = usePageReady();
   const { t } = Route.useSearch();
-  const { students } = useStudents();
+  const { students, isInitialLoading } = useStudents();
   const active = students.filter((s) => s && s.name?.trim() && !s.pendingApproval);
   const [selected, setSelected] = useState<string[]>([]);
   const [submitAsk, setSubmitAsk] = useState(false);
   const nav = useNavigate();
-  if (!ready) return <PageSkeleton withNav={false} />;
+  if (!ready || isInitialLoading) return <PageSkeleton withNav={false} />;
 
   const toggle = (id: string) =>
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));

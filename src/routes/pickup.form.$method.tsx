@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { usePageReady } from "@/hooks/use-page-ready";
 import { FormSkeleton } from "@/components/feedback/Skeletons";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { PhoneShell } from "@/components/layout/PhoneShell";
 import { TopBar } from "@/components/layout/TopBar";
@@ -14,6 +14,7 @@ import { Users, Clock, Megaphone, QrCode, AlertTriangle } from "lucide-react";
 import { QrGuideDialog } from "@/components/pickup/QrGuideDialog";
 import { getDraft, setDraft, type PickupDraft } from "@/lib/pickup/draft";
 import { cn } from "@/lib/utils";
+import { beginPickupWrite, savePickupWrite } from "@/lib/pickup/history";
 
 const searchSchema = z.object({ s: z.string().optional(), f: z.string().optional() });
 
@@ -35,22 +36,34 @@ function FormPage() {
   const { method } = Route.useParams() as { method: "self" | "other" | "ojek" };
   const { s, f } = Route.useSearch();
   const nav = useNavigate();
-  const [state, setState] = useState<PickupDraft>(() => ({ ...getDraft(), method }));
+  const [state, setState] = useState<PickupDraft>(() => {
+    const draft = getDraft();
+    return {
+      ...draft,
+      method,
+      writeMethod: method,
+      idPemanggilan: draft.writeMethod === method ? draft.idPemanggilan : undefined,
+    };
+  });
   const [noteValid, setNoteValid] = useState(true);
   const [qrAsk, setQrAsk] = useState(false);
+  const stateRef = useRef(state);
+  const writeStarted = useRef(false);
+  stateRef.current = state;
 
   // Hook MESI dipanggil SIAPAPUN sebelum early return, agar jumlah & urutan
   // hook konsisten di setiap render (aturan Rules of Hooks).
-  const { students } = useStudents();
+  const { students, isInitialLoading } = useStudents();
 
   useEffect(() => {
     setDraft({ ...state, method });
   }, [state, method]);
 
-  if (!ready) return <FormSkeleton />;
-
-const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) =>
-    setState((p) => ({ ...p, [k]: v }));
+  const set = <K extends keyof PickupDraft>(k: K, v: PickupDraft[K]) => {
+    const next = { ...stateRef.current, [k]: v };
+    stateRef.current = next;
+    setState(next);
+  };
 
 const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApproval);
   const studentIds = (s ?? firstActive?.id ?? "").split(",").filter(Boolean);
@@ -59,6 +72,36 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
   const friendList: Student[] = students.filter((x) => friendIds.includes(x.id));
 
   const selectedStudents: Student[] = students.filter((x) => studentIds.includes(x.id));
+
+  // INSERT dijalankan segera setelah siswa & metode diketahui. Jika pengguna
+  // sudah mulai mengetik sebelum respons INSERT kembali, snapshot terbaru tetap
+  // disinkronkan sesudah id_pemanggilan tersedia.
+  useEffect(() => {
+    if (!ready || studentIds.length === 0 || writeStarted.current) return;
+    writeStarted.current = true;
+    const idPemanggilan = stateRef.current.idPemanggilan ?? String(Date.now());
+    const draft = { ...stateRef.current, idPemanggilan, writeMethod: method };
+    setState(draft);
+    setDraft(draft);
+    void beginPickupWrite({ idPemanggilan, studentIds, method, draft }).then((savedId) => {
+      if (!savedId) return;
+      const latest = { ...stateRef.current, idPemanggilan: savedId, writeMethod: method };
+      stateRef.current = latest;
+      setState(latest);
+      setDraft(latest);
+      void savePickupWrite({ idPemanggilan: savedId, studentIds, method, draft: latest });
+    });
+  }, [ready, method, s, students]);
+
+  const saveCurrentField = () => {
+    const idPemanggilan = stateRef.current.idPemanggilan;
+    if (!idPemanggilan) return;
+    const draft = { ...stateRef.current, writeMethod: method };
+    setDraft(draft);
+    void savePickupWrite({ idPemanggilan, studentIds, method, draft });
+  };
+
+  if (!ready || isInitialLoading) return <FormSkeleton />;
 
   const called = [
     ...selectedStudents.map((st: Student) => ({
@@ -141,7 +184,7 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
 
         {method === "other" && (
           <>
-            <TextField label="Siapa yang menjemput Ananda?" value={state.pickerName} onChange={(v) => set("pickerName", v)} placeholder="Penjemput | Contoh: Om Fulan" />
+            <TextField label="Siapa yang menjemput Ananda?" value={state.pickerName} onChange={(v) => set("pickerName", v)} onBlur={saveCurrentField} placeholder="Penjemput | Contoh: Om Fulan" />
             {/*z<SelectField
               label="Hubungan dengan siswa"
               value={state.relation as "Kakek" | "Nenek" | "Paman" | "Bibi" | "Saudara"}
@@ -159,11 +202,12 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
 
         {method === "ojek" && (
           <>
-            <TextField label="Nama driver" value={state.driverName} onChange={(v) => set("driverName", v)} placeholder="Nama driver" />
+            <TextField label="Nama driver" value={state.driverName} onChange={(v) => set("driverName", v)} onBlur={saveCurrentField} placeholder="Nama driver" />
             <SelectField
               label="Platform"
               value={state.platform}
               onChange={(v) => set("platform", v)}
+              onBlur={saveCurrentField}
               options={[
                 { value: "Gojek", label: "Gojek" },
                 { value: "Grab", label: "Grab" },
@@ -173,7 +217,7 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
                 { value: "JogjaKita", label: "JogjaKita" },
               ]}
             />
-            <PlateInput value={state.plate} onChange={(v) => set("plate", v)} />
+            <PlateInput value={state.plate} onChange={(v) => set("plate", v)} onBlur={saveCurrentField} />
           </>
         )}
 
@@ -182,6 +226,7 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
             label="Lokasi menunggu"
             value={state.waitLocation}
             onChange={(v) => set("waitLocation", v)}
+            onBlur={saveCurrentField}
             options={[
               { value: "Gerbang Utama", label: "Gerbang Utama" },
               { value: "Gerbang Belakang", label: "Gerbang Belakang" },
@@ -210,6 +255,7 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
                 return;
               }
               set("estimate", v);
+              queueMicrotask(saveCurrentField);
             }}
             options={
               method === "self"
@@ -246,6 +292,7 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
           extras={state.noteExtras}
           onExtrasChange={(v) => set("noteExtras", v)}
           onValidityChange={setNoteValid}
+          onBlur={saveCurrentField}
         />
 
         <QrGuideDialog
@@ -253,10 +300,12 @@ const firstActive = students.find((x) => x && x.name?.trim() && !x.pendingApprov
           onAccept={() => {
             set("estimate", "qr");
             setQrAsk(false);
+            saveCurrentField();
           }}
           onDecline={() => {
             set("estimate", "sudah");
             setQrAsk(false);
+            saveCurrentField();
           }}
         />
 {/*}
